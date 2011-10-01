@@ -1,28 +1,30 @@
 
-var CANVAS_WIDTH = 800;
-var CANVAS_HEIGHT = 600;
-var X_STEP = 15;
-var Y_STEP = 16;
+var CANVAS_WIDTH = 1600;
+var CANVAS_HEIGHT = 800;
+var X_STEP = 4;
+var Y_STEP = 4;
 var X_MAX = Math.floor(CANVAS_WIDTH/X_STEP);
 var Y_MAX = Math.floor(CANVAS_HEIGHT/Y_STEP);
 
 var expired = {};
 var particles = {};
+var active_clusters = {};
 var on_top = {};
 var free_to_move = {};
 var context;
 var canvasElement;
 var grid = [];
 
-var free_particle;
+var free_particles = {};
+var num_free = 225;
 var simulation;
 
 $(function() {
   simulation = new init();
 
   canvasElement = document.createElement("canvas");
-  canvasElement.width = simulation.CANVAS_WIDTH;
-  canvasElement.height = simulation.CANVAS_HEIGHT;
+  canvasElement.width = CANVAS_WIDTH;
+  canvasElement.height = CANVAS_HEIGHT;
   document.body.appendChild(canvasElement);
   
   context = canvasElement.getContext("2d");
@@ -75,16 +77,15 @@ function load_data_gui() {
 function init() {
   var that = this;
 
-  this.particles = [];
   this.FPS = 1;
   this.hundred = function() { 
     for(var i=0; i<100; i++) { new_particle();};
   }
   this.is_paused = true;
-  this.pause = function() { this.is_paused = true; clearInterval(that.intervalID);}
+  this.pause = function() { this.is_paused = true; clearInterval(this.intervalID);}
   this.play = playSimulation;
   this.probability_cutoff = 0.5;
-  this.num_particles = this.particles.length;
+  this.num_particles = 0;
 
   this.CANVAS_WIDTH = 800;
   this.CANVAS_HEIGHT = 600;
@@ -95,17 +96,29 @@ function init() {
 
   this.add_particle = new_particle;
   this.intervalID;
-  this.one_by_one = function() { this.execute = walk_one; this.play()};
+  this.one_by_one = function() { this.execute = walk_one; this.play(); for(var i=0; i< X_MAX; i++) { new_particle(i, 0, undefined, "nuclei");}; };
   this.by_dice = function() { this.execute = roll_the_dice; this.play()}//this.is_paused = false; this.play();};
   this.execute = this.one_by_one;
   this.clear = reset;
 
   function walk_one() {
-    if(free_particle && !free_particle.cluster) {
-      free_particle.walk();
-    } else {
-      free_particle = new_particle();
-    }
+    //if(free_particles.length>0) {
+      for(var key in free_particles) {
+        if(free_particles[key].cluster) {
+          delete free_particles[key];
+        } else {
+          free_particles[key].walk();
+        }
+      }
+        var p = new_particle(undefined, Y_MAX-1, "nuclei", undefined);
+        free_particles[p.id] = p;
+      //} else {
+    /*if(Object.size(free_particles)< 400) {
+      for(var i=0; i< 50; i++) {
+        var p = new_particle(undefined, Y_MAX-1, "nuclei", undefined);
+        free_particles[p.id] = p;
+      }
+    }*/
   }
   function roll_the_dice() {
     p = Math.random();
@@ -117,50 +130,36 @@ function init() {
       }
     }
   }
-  function hundred_moves() {
-    for(var i=0; i< 100; i++) {
-      keys = get_keys(free_to_move);
-      if(keys.length > 0) {
-        n = Math.floor(Math.random()*keys.length)
-        pn = free_to_move[keys[n]];
-        pn.walk();
-      } else {
-        //new_particle();
-      }
-    }
-  }
-  function thousand_moves() {
-    for(var i=0; i<100; i++) {
-      hundred_moves();
-    }
-  }
-  function new_particle(x, y) {
-    p = new Particle(x, y);
+  function new_particle(x, y, cluster_to, type) {
+    p = new Particle(x, y, cluster_to, type);
     on_top[p.id] = p;
     particles[p.id] = p;
     p.draw();
-    that.particles.push(p);
     that.num_particles += 1;
     return p;
   }
   function Cluster() {
     this.id = Math.floor((new Date()).getTime()*Math.random())
-    this.particles = [];
+    this.particles = {};
+    this.num_particles = 0;
     this.color_levels = [Math.floor(200*Math.random()),Math.floor(200*Math.random()), Math.floor(200*Math.random())];
+
+    active_clusters[this.id] = this;
   }
   Cluster.prototype = {
-    color: function() { return "rgba("+this.color_levels[0]+","+this.color_levels[1]+","+this.color_levels[2]+",1.0)";}
+    color: function() { return "rgba("+this.color_levels[0]+","+this.color_levels[1]+","+this.color_levels[2]+",1.0)";},
+    add_particle: function(p) { p.cluster = this; this.particles[p.id] = p; this.num_particles+=1;},
+    remove_particle: function(p) { p.cluster = undefined; delete this.particles[p.id]; this.num_particles += -1; }
   }
   Cluster.prototype.merge = function(other) {
     if(this !== other) {
-      for(var i=0; i < other.particles.length; i++) {
-        var p = other.particles[i];
-        this.particles.push(p);
-        p.cluster = this;
+      for(var key in other.particles) {
+        var p = other.particles[key];
+        this.add_particle(p);
         p.draw();
       }
-      other.particles = [];
       delete other;
+      delete active_clusters[other.id];
     }
   }
   function random_side(max) {
@@ -170,10 +169,12 @@ function init() {
       return max-1;
     }
   }
-  function Particle(I_x, I_y) {
+  function Particle(I_x, I_y, cluster_to, type) {
     this.x = I_x !== undefined ? I_x : Math.floor(X_MAX*Math.random());
     this.y = I_y !== undefined ? I_y : Math.floor(Y_MAX*Math.random()); 
     this.id = "id_"+Math.floor((new Date()).getTime()*Math.random())
+    this.stick_to = cluster_to || "particle";
+    this.type = type || "particle";
     //this.color_levels = [Math.floor(200*Math.random()),Math.floor(200*Math.random()), Math.floor(200*Math.random())];
     this.cluster;
     this.level = 1;
@@ -183,25 +184,31 @@ function init() {
   }
   Particle.prototype = {
     stack: function() { return grid[this.x][this.y];},
-    neigh_x: function(step) { return grid[(this.x+step+X_MAX) % X_MAX][this.y];},
-    neigh_y: function(step) { return grid[this.x][(this.y+step+Y_MAX) % Y_MAX];},
-    color: function() { return "rgba("+this.color_levels[0]+","+this.color_levels[1]+","+this.color_levels[2]+","+this.level/1.0+")";}
+    //neigh_x: function(step) { return grid[(this.x+step+X_MAX) % X_MAX][this.y];},
+    //neigh_y: function(step) { return grid[this.x][(this.y+step+Y_MAX) % Y_MAX];},
+    neigh_x: function(step) { if((0<=this.x+step) && (this.x+step <= X_MAX-1)) {return grid[this.x+step][this.y];} else { return false;}},
+    neigh_y: function(step) { if((0<=this.y+step) && (this.y+step <= Y_MAX-1)) {return grid[this.x][this.y+step];} else { return false;}},
+    color: function() { return "rgba("+this.color_levels[0]+","+this.color_levels[1]+","+this.color_levels[2]+",1.0)";} //+this.level/1.0+")";}
   }
   Particle.prototype.merge_clusters = function(topped) {
     if(this.cluster && topped.cluster) {
-      this.cluster.merge(topped.cluster);
+      //if(Object.size(this.cluster.particles) > Object.size(topped.cluster.particles)) {
+      if(this.cluster.num_particles > topped.cluster.num_particles) {
+        this.cluster.merge(topped.cluster);
+      } else {
+        topped.cluster.merge(this.cluster);
+      }
     } else if(this.cluster) {
-      topped.cluster = this.cluster;
-      topped.cluster.particles.push(topped);
+      this.cluster.add_particle(topped);
     } else if(topped.cluster) {
-      this.cluster = topped.cluster;
-      this.cluster.particles.push(this);
+      topped.cluster.add_particle(this);
     } else {
-      c = new Cluster();
-      this.cluster = c;
-      topped.cluster = c;
-      c.particles.push(this);
-      c.particles.push(topped);
+      if(this.stick_to === topped.type) {
+        c = new Cluster();
+        c.add_particle(this);
+        c.add_particle(topped);
+        this.type = topped.type;
+      }
     }
     topped.draw();
     this.draw();
@@ -227,31 +234,33 @@ function init() {
     num += this.merge_if_not_empty(this.neigh_y( 1));
     if(num == 0) {
       if(this.cluster) {
-        this.cluster.particles.splice(this.cluster.particles.indexOf(this), 1)
+        this.cluster.remove_particle(this);
+        //this.cluster.particles.splice(this.cluster.particles.indexOf(this), 1)
       }
-      this.cluster = undefined; 
       free_to_move[this.id] = this;
     } else {
       delete free_to_move[this.id];  
     }
   }
   Particle.prototype.merge_if_not_empty = function(stack) {
-    if(stack.length > 0) {
+    if(stack && stack.length > 0) {
       this.merge_clusters(stack[stack.length-1])
     }
     return stack.length;
   }
   Particle.prototype.draw = function() {
     this.clear();
-    context.fillStyle = this.cluster ? this.cluster.color() : "#ccc"; //this.color(); // "rgba(5, 5, 5, "+this.level/10.0+")"
+    context.fillStyle = this.cluster ? this.cluster.color() : "#555"; //this.color(); // "rgba(5, 5, 5, "+this.level/10.0+")"
     context.beginPath();
     //context.rect(this.x*X_STEP+1, this.y*Y_STEP+1, X_STEP-2, Y_STEP-2) 
     context.rect(this.x*X_STEP, this.y*Y_STEP, X_STEP, Y_STEP) 
     context.closePath();
     context.fill();
     context.fillStyle = "#fff";
+    if(X_STEP > 10 && Y_STEP > 10) {
     context.font      = 'italic '+X_STEP/2+'px sans-serif';
     context.fillText(this.level, this.x*X_STEP+X_STEP/3, this.y*Y_STEP+Y_STEP/1.5);
+    }
   }
   Particle.prototype.clear = function() {
     //context.clearRect(this.x*X_STEP+1, this.y*Y_STEP+1, X_STEP-2, Y_STEP-2);
@@ -284,8 +293,8 @@ function init() {
     switch(direction) {
       case 0: this.move_to('x', -1);  break;
       case 1: this.move_to('x',  1);  break;
-      case 2: this.move_to('y', -1);  break;
-      case 3: this.move_to('y',  1);  break;
+      case 2 || 3: this.move_to('y', -1);  break;
+      //case 3: this.move_to('y',  1);  break;
     } 
   }
   Particle.prototype.destroy = function() {
@@ -306,23 +315,16 @@ function init() {
     if((0 <= this[which]+step) && (this[which]+step <= max)) {
       this[which] += step;
     } else if(step == 1) {
-      this[which] = 0;
+      //this[which] = 0;
     } else if(step == -1) {
-      this[which] = max;
+      //this[which] = max;
     }
     this.check_for_neighbors();
     this.set_grid();
   }
-  function get_keys(hash) {
-    var keys = [];
-    for(var i in hash) if (hash.hasOwnProperty(i))
-    {
-      keys.push(i);
-    }
-    return keys;
-  }
   function playSimulation() {
     that.is_paused = false;
+    clearInterval(that.intervalID);
     that.intervalID = setInterval(function() {
     //roll_the_dice();
       that.execute();
@@ -371,11 +373,17 @@ function reset() {
   context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   simulation.pause(); 
   simulation.is_paused=true;
-  simulation.particles = []
   simulation.num_particles = 0;
   expired = {};
   particles = {};
   on_top = {};
   free_to_move = {};
 }
+Object.size = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
 
