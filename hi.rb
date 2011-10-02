@@ -8,6 +8,12 @@ end
 get '/particles' do
   erb :particles
 end
+get '/flying' do
+  erb :flying
+end
+get '/planets' do
+  erb :planets
+end
 get '/hello' do
   "Hello, who are you?"
 end

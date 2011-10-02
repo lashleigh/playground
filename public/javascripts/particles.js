@@ -1,8 +1,8 @@
 
 var CANVAS_WIDTH = 500;
-var CANVAS_HEIGHT= 400;
-var X_STEP = 3;
-var Y_STEP = 3;
+var CANVAS_HEIGHT= 500;
+var X_STEP = 5;
+var Y_STEP = 5;
 var X_MAX = Math.floor(CANVAS_WIDTH/X_STEP);
 var Y_MAX = Math.floor(CANVAS_HEIGHT/Y_STEP);
 
@@ -38,41 +38,40 @@ $(function() {
   }, false)
 })
 function load_data_gui() {
+  var gui = new DAT.GUI();
 
-   var gui = new DAT.GUI();
+  // Sliders with min + max
+  gui.add(simulation, 'FPS').min(0).max(9).onFinishChange(function(newValue) {
+    simulation.pause();
+    simulation.FPS = Math.exp(newValue);
+    simulation.play();
+  });
+  //gui.add(simulation, 'growthSpeed').min(0.01).max(1).step(0.05);
+  //gui.add(simulation, 'speed', 0.1, 2, 0.05); // shorthand for min/max/step
 
-   // Sliders with min + max
-   gui.add(simulation, 'FPS').min(0).max(9).onFinishChange(function(newValue) {
-     simulation.pause();
-     simulation.FPS = Math.exp(newValue);
-     simulation.play();
-   });
-   //gui.add(simulation, 'growthSpeed').min(0.01).max(1).step(0.05);
-   //gui.add(simulation, 'speed', 0.1, 2, 0.05); // shorthand for min/max/step
+  //gui.add(simulation, 'noiseStrength', 10, 100, 5);
 
-   //gui.add(simulation, 'noiseStrength', 10, 100, 5);
+  gui.add(simulation, 'num_particles').listen();
+  // Boolean checkbox
+  gui.add(simulation, 'is_paused').name('Pause').listen().onChange(function(newValue) {
+    if(simulation.is_paused) {
+      simulation.pause();
+    } else {
+      simulation.play();
+    }
+  });
 
-   gui.add(simulation, 'num_particles').listen();
-   // Boolean checkbox
-   gui.add(simulation, 'is_paused').name('Pause').listen().onChange(function(newValue) {
-     if(simulation.is_paused) {
-       simulation.pause();
-     } else {
-       simulation.play();
-     }
-   });
+  // Fires a function called 'explode'
+  gui.add(simulation, 'hundred').name('Hundred more!'); // Specify a custom name.
+  gui.add(simulation, 'one_by_one').name('One by one'); // Specify a custom name.
 
-   // Fires a function called 'explode'
-   gui.add(simulation, 'hundred').name('Hundred more!'); // Specify a custom name.
-   gui.add(simulation, 'one_by_one').name('One by one'); // Specify a custom name.
-
-   gui.add(simulation, 'probability_cutoff').min(0).max(1).onFinishChange(function(newValue) {
-     simulation.pause();
-     simulation.probability_cutoff = newValue;
-     simulation.play();
-   });
-   gui.add(simulation, 'by_dice').name('Roll the dice'); // Specify a custom name.
-   gui.add(simulation, 'clear').name('Clear'); // Specify a custom name.
+  gui.add(simulation, 'probability_cutoff').min(0).max(1).onFinishChange(function(newValue) {
+    simulation.pause();
+    simulation.probability_cutoff = newValue;
+    simulation.play();
+  });
+  gui.add(simulation, 'by_dice').name('Roll the dice'); // Specify a custom name.
+  gui.add(simulation, 'clear').name('Clear'); // Specify a custom name.
 }
 function init() {
   var that = this;
@@ -99,7 +98,7 @@ function init() {
   this.intervalID;
   this.one_by_one = function() { this.execute = walk_one;   this.walk_func = upward_bias;this.play(); for(var i=0; i< X_MAX; i++) { new_particle(i, 0, undefined, "nuclei");}; };
   this.snowflake = function() { this.execute = snowflake;   this.walk_func = center_bias;this.play(); new_particle(Math.floor(X_MAX/2), Math.floor(Y_MAX/2), undefined, "nuclei");};
-  this.center_source = function() { this.execute = center_source;  this.walk_func = outward_bias;this.play(); circle_of_nuclei(X_MAX/2, Y_MAX/2, Math.min(X_MAX/2, Y_MAX/2), undefined, "nuclei");};
+  this.center_source = function() { this.execute = center_source;  this.walk_func = basic_walk;this.play(); circle_of_nuclei(X_MAX/2, Y_MAX/2, Math.min(X_MAX/2, Y_MAX/2), undefined, "nuclei");};
   this.circle_source = function() { this.execute = circle_source;  this.walk_func = basic_walk;this.play(); new_particle(Math.floor(X_MAX/2), Math.floor(Y_MAX/2), undefined, "nuclei");};
   this.by_dice = function() { this.execute = roll_the_dice; this.walk_func = basic_walk; this.play()};
   this.execute = this.snowflake;
@@ -165,7 +164,7 @@ function init() {
   function circle_of_nuclei(x0, y0, r, cluster_to, type) {
     x0 = Math.floor(x0);
     y0 = Math.floor(y0);
-    r = Math.floor(r);
+    r = Math.floor(r)-1;
     new_particle(x0, y0+r, cluster_to, type);
     new_particle(x0, y0-r, cluster_to, type);
     new_particle(x0+r, y0, cluster_to, type);
@@ -466,68 +465,3 @@ Object.size = function(obj) {
     return size;
 };
 
-function center_bias(me) {
-  me.delta_x = Math.abs(me.x-X_MAX/2)/(X_MAX/2)
-  me.delta_y = Math.abs(me.y-Y_MAX/2)/(Y_MAX/2)
-  me.y_prob  = me.delta_x ? me.delta_y/me.delta_x : 10
-  var pref_x = 1, pref_y = 1;
-  if(me.x > X_MAX/2) {pref_x = -1}
-  if(me.y > Y_MAX/2) {pref_y = -1}
-  var p = Math.random()*(me.y_prob+1);
-  if(p < 1) {
-    if(Math.random() < 0.25) {
-      me.move_to('x', pref_x*(-1));
-    } else {
-      me.move_to('x', pref_x);
-    }
-  } else {
-    if(Math.random() < 0.25) {
-      me.move_to('y', pref_y*(-1));
-    } else {
-      me.move_to('y', pref_y);
-    }
-  }
-}
-function outward_bias(me) {
-  basic_walk(me);
-  /*me.delta_x = Math.abs(me.x-X_MAX/2)/(X_MAX/2)
-  me.delta_y = Math.abs(me.y-Y_MAX/2)/(Y_MAX/2)
-  me.y_prob  = me.delta_x ? me.delta_y/me.delta_x : 10
-  var pref_x = -1, pref_y = -1;
-  if(me.x > X_MAX/2) {pref_x = 1}
-  if(me.y > Y_MAX/2) {pref_y = 1}
-  var p = Math.random()*(me.y_prob+1);
-  if(p < 1) {
-    if(Math.random() < 0.25) {
-      me.move_to('x', pref_x*(-1));
-    } else {
-      me.move_to('x', pref_x);
-    }
-  } else {
-    if(Math.random() < 0.25) {
-      me.move_to('y', pref_y*(-1));
-    } else {
-      me.move_to('y', pref_y);
-    }
-  }*/
-}
-function upward_bias(me) {
-  var direction = Math.floor(Math.random()*4)
-
-  switch(direction) {
-    case 0: me.move_to('x', -1);  break;
-    case 1: me.move_to('x',  1);  break;
-    case 2 || 3: me.move_to('y', -1);  break;
-    //case 3: me.move_to('y',  1);  break;
-  } 
-}
-function basic_walk(me) {
-  var direction = Math.floor(Math.random()*4)
-
-  switch(direction) {
-    case 0: me.move_to('x', -1);  break;
-    case 1: me.move_to('x',  1);  break;
-    case 2: me.move_to('y', -1);  break;
-    case 3: me.move_to('y',  1);  break;
-  } 
-}
