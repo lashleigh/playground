@@ -1,8 +1,8 @@
 
-var CANVAS_WIDTH = 1600;
-var CANVAS_HEIGHT = 800;
-var X_STEP = 4;
-var Y_STEP = 4;
+var CANVAS_WIDTH = 500;
+var CANVAS_HEIGHT= 400;
+var X_STEP = 3;
+var Y_STEP = 3;
 var X_MAX = Math.floor(CANVAS_WIDTH/X_STEP);
 var Y_MAX = Math.floor(CANVAS_HEIGHT/Y_STEP);
 
@@ -34,7 +34,7 @@ $(function() {
 
   canvasElement.addEventListener('click', function(e) {
     coords = mouse_to_grid(e);
-    simulation.add_particle(coords[0], coords[1]);
+    simulation.add_particle(coords[0], coords[1], undefined, "nuclei");
   }, false)
 })
 function load_data_gui() {
@@ -85,6 +85,7 @@ function init() {
   this.pause = function() { this.is_paused = true; clearInterval(this.intervalID);}
   this.play = playSimulation;
   this.probability_cutoff = 0.5;
+  this.sticking_prob = 1.0;
   this.num_particles = 0;
 
   this.CANVAS_WIDTH = 800;
@@ -96,29 +97,113 @@ function init() {
 
   this.add_particle = new_particle;
   this.intervalID;
-  this.one_by_one = function() { this.execute = walk_one; this.play(); for(var i=0; i< X_MAX; i++) { new_particle(i, 0, undefined, "nuclei");}; };
-  this.by_dice = function() { this.execute = roll_the_dice; this.play()}//this.is_paused = false; this.play();};
-  this.execute = this.one_by_one;
+  this.one_by_one = function() { this.execute = walk_one;   this.walk_func = upward_bias;this.play(); for(var i=0; i< X_MAX; i++) { new_particle(i, 0, undefined, "nuclei");}; };
+  this.snowflake = function() { this.execute = snowflake;   this.walk_func = center_bias;this.play(); new_particle(Math.floor(X_MAX/2), Math.floor(Y_MAX/2), undefined, "nuclei");};
+  this.center_source = function() { this.execute = center_source;  this.walk_func = outward_bias;this.play(); circle_of_nuclei(X_MAX/2, Y_MAX/2, Math.min(X_MAX/2, Y_MAX/2), undefined, "nuclei");};
+  this.circle_source = function() { this.execute = circle_source;  this.walk_func = basic_walk;this.play(); new_particle(Math.floor(X_MAX/2), Math.floor(Y_MAX/2), undefined, "nuclei");};
+  this.by_dice = function() { this.execute = roll_the_dice; this.walk_func = basic_walk; this.play()};
+  this.execute = this.snowflake;
   this.clear = reset;
+  this.walk_func = basic_walk;
 
   function walk_one() {
-    //if(free_particles.length>0) {
-      for(var key in free_particles) {
-        if(free_particles[key].cluster) {
-          delete free_particles[key];
-        } else {
-          free_particles[key].walk();
-        }
+    for(var key in free_particles) {
+      if(free_particles[key].cluster) {
+        delete free_particles[key];
+      } else {
+        free_particles[key].walk();
       }
-        var p = new_particle(undefined, Y_MAX-1, "nuclei", undefined);
-        free_particles[p.id] = p;
-      //} else {
-    /*if(Object.size(free_particles)< 400) {
-      for(var i=0; i< 50; i++) {
-        var p = new_particle(undefined, Y_MAX-1, "nuclei", undefined);
-        free_particles[p.id] = p;
+    }
+    var p = new_particle(undefined, Y_MAX-1, "nuclei", undefined);
+    free_particles[p.id] = p;
+  }
+  function snowflake() {
+    for(var key in free_particles) {
+      if(free_particles[key].cluster) {
+        delete free_particles[key];
+      } else {
+        free_particles[key].walk();
       }
-    }*/
+    }
+    if(Object.size(free_particles) < 150) {
+      var dir = Math.floor(Math.random()*4)
+      var p;
+      switch(dir) {
+        case 0: p = new_particle(0, undefined, "nuclei", undefined); break;
+        case 1: p = new_particle(X_MAX-1, undefined, "nuclei", undefined); break;
+        case 2: p = new_particle(undefined, 0, "nuclei", undefined); break;
+        case 3: p = new_particle(undefined, Y_MAX-1, "nuclei", undefined); break;
+      }
+      free_particles[p.id] = p;
+    }
+  }
+  function circle_source() {
+    for(var key in particles) {
+      if(particles[key].cluster) {
+        delete particles[key];
+      } else {
+        particles[key].walk();
+      }
+    }
+    if(Object.size(particles) < 150) {
+      circle_of_nuclei(X_MAX/2, Y_MAX/2, Math.min(X_MAX/2, Y_MAX/2), "nuclei", undefined);
+    }
+  }
+  function center_source() {
+    for(var key in free_particles) {
+      if(free_particles[key].cluster) {
+        delete free_particles[key];
+      } else {
+        free_particles[key].walk();
+      }
+    }
+    if(Object.size(free_particles) < 150) {
+      p = new_particle(Math.floor(X_MAX/2), Math.floor(Y_MAX/2), "nuclei", undefined);
+      free_particles[p.id] = p;
+    }
+  }
+  function circle_of_nuclei(x0, y0, r, cluster_to, type) {
+    x0 = Math.floor(x0);
+    y0 = Math.floor(y0);
+    r = Math.floor(r);
+    new_particle(x0, y0+r, cluster_to, type);
+    new_particle(x0, y0-r, cluster_to, type);
+    new_particle(x0+r, y0, cluster_to, type);
+    new_particle(x0-r, y0, cluster_to, type);
+
+    var f = 1 - r;
+    var ddF_x = 1;
+    var ddF_y = -2 * r;
+    var x = 0;
+    var y = r;
+    while(x < y) {
+      if(f >= 0) {
+        y--;
+        ddF_y += 2;
+        f += ddF_y;
+      }
+      x++;
+      ddF_x += 2;
+      f += ddF_x;    
+      new_particle(x0 + x, y0 + y, cluster_to, type);
+      new_particle(x0 - x, y0 + y, cluster_to, type);
+      new_particle(x0 + x, y0 - y, cluster_to, type);
+      new_particle(x0 - x, y0 - y, cluster_to, type);
+      new_particle(x0 + y, y0 + x, cluster_to, type);
+      new_particle(x0 - y, y0 + x, cluster_to, type);
+      new_particle(x0 + y, y0 - x, cluster_to, type);
+      new_particle(x0 - y, y0 - x, cluster_to, type); 
+    }
+  }
+  function set_nuclei_at_border() {
+    for(var i=0; i < X_MAX; i++) {
+      new_particle(i, 0, undefined, "nuclei");
+      new_particle(i, Y_MAX-1, undefined, "nuclei");
+    }
+    for(var j=0; j<Y_MAX; j++) {
+      new_particle(0, j, undefined, "nuclei");
+      new_particle(X_MAX-1,j, undefined, "nuclei");
+    }
   }
   function roll_the_dice() {
     p = Math.random();
@@ -136,6 +221,7 @@ function init() {
     particles[p.id] = p;
     p.draw();
     that.num_particles += 1;
+    if(type && type == "nuclei"){ delete particles[p.id] }
     return p;
   }
   function Cluster() {
@@ -287,16 +373,9 @@ function init() {
     this.level = this.stack().length; 
     this.draw();
   }
-  Particle.prototype.walk = function() {
-    var direction = Math.floor(Math.random()*4)
-  
-    switch(direction) {
-      case 0: this.move_to('x', -1);  break;
-      case 1: this.move_to('x',  1);  break;
-      case 2 || 3: this.move_to('y', -1);  break;
-      //case 3: this.move_to('y',  1);  break;
-    } 
-  }
+  Particle.prototype.walk = function() { that.walk_func(this)}; 
+
+
   Particle.prototype.destroy = function() {
     this.free_grid();
     delete on_top[this.id];
@@ -387,3 +466,68 @@ Object.size = function(obj) {
     return size;
 };
 
+function center_bias(me) {
+  me.delta_x = Math.abs(me.x-X_MAX/2)/(X_MAX/2)
+  me.delta_y = Math.abs(me.y-Y_MAX/2)/(Y_MAX/2)
+  me.y_prob  = me.delta_x ? me.delta_y/me.delta_x : 10
+  var pref_x = 1, pref_y = 1;
+  if(me.x > X_MAX/2) {pref_x = -1}
+  if(me.y > Y_MAX/2) {pref_y = -1}
+  var p = Math.random()*(me.y_prob+1);
+  if(p < 1) {
+    if(Math.random() < 0.25) {
+      me.move_to('x', pref_x*(-1));
+    } else {
+      me.move_to('x', pref_x);
+    }
+  } else {
+    if(Math.random() < 0.25) {
+      me.move_to('y', pref_y*(-1));
+    } else {
+      me.move_to('y', pref_y);
+    }
+  }
+}
+function outward_bias(me) {
+  basic_walk(me);
+  /*me.delta_x = Math.abs(me.x-X_MAX/2)/(X_MAX/2)
+  me.delta_y = Math.abs(me.y-Y_MAX/2)/(Y_MAX/2)
+  me.y_prob  = me.delta_x ? me.delta_y/me.delta_x : 10
+  var pref_x = -1, pref_y = -1;
+  if(me.x > X_MAX/2) {pref_x = 1}
+  if(me.y > Y_MAX/2) {pref_y = 1}
+  var p = Math.random()*(me.y_prob+1);
+  if(p < 1) {
+    if(Math.random() < 0.25) {
+      me.move_to('x', pref_x*(-1));
+    } else {
+      me.move_to('x', pref_x);
+    }
+  } else {
+    if(Math.random() < 0.25) {
+      me.move_to('y', pref_y*(-1));
+    } else {
+      me.move_to('y', pref_y);
+    }
+  }*/
+}
+function upward_bias(me) {
+  var direction = Math.floor(Math.random()*4)
+
+  switch(direction) {
+    case 0: me.move_to('x', -1);  break;
+    case 1: me.move_to('x',  1);  break;
+    case 2 || 3: me.move_to('y', -1);  break;
+    //case 3: me.move_to('y',  1);  break;
+  } 
+}
+function basic_walk(me) {
+  var direction = Math.floor(Math.random()*4)
+
+  switch(direction) {
+    case 0: me.move_to('x', -1);  break;
+    case 1: me.move_to('x',  1);  break;
+    case 2: me.move_to('y', -1);  break;
+    case 3: me.move_to('y',  1);  break;
+  } 
+}
