@@ -8,7 +8,7 @@ var isMouseDown,onMouseDownPosition, onMouseDownTheta = 45, onMouseDownPhi =60, 
 
 var grid = [];
 var intervalID;
-var plane_size = 1000, voxel_dim = 55, grid_max = Math.floor(plane_size/voxel_dim); 
+var plane_size = 1500, voxel_dim = 175, grid_max = Math.floor(plane_size/voxel_dim); 
 plane_size = grid_max*voxel_dim;
 var half_plane = plane_size/2;
 var simulation;
@@ -146,7 +146,8 @@ function new_voxel(position) {
     voxel.grid = {};
     voxel.grid.x = Math.floor((voxel.position.x+half_plane - voxel_dim/2)/voxel_dim);
     voxel.grid.y = Math.floor((voxel.position.z+half_plane - voxel_dim/2)/voxel_dim);
-    voxel.grid.z = 0;
+    voxel.grid.z = (voxel.position.y-voxel_dim/2)/voxel_dim;
+    console.log(voxel.grid.z);
     if(coords[4]) {
       merge_clusters(voxel, coords[4]);
     }
@@ -179,15 +180,27 @@ function to_coords(pos) {
   var grid_y = (z-voxel_dim/2 + half_plane)/voxel_dim 
 
   var color, height, cluster;
-  var stack = grid[grid_x][grid_y];
-  if(stack.length > 0) {
-    var v = stack[stack.length-1];
-    height = v.position.y + voxel_dim;
-    color = v.materials;
-    cluster = v;
+  var stack = get_stack(grid_x,grid_y);
+  if(stack) {
+    if(stack.length > 0) {
+      var v = stack[stack.length-1];
+      height = v.position.y + voxel_dim;
+      color = v.materials;
+      cluster = v;
+    }
+    return [x, height || voxel_dim/2, z, color, cluster || false];
+  } else {
+    console.log("out of bounds");
+    return false;
   }
-  return [x, height || voxel_dim/2, z, color, cluster || false];
   //return [x, y, z, color, cluster || false]; // This allows voxels to be above the surface level
+}
+function get_stack(x, y) {
+  if(grid[x] && grid[x][y]) {
+    return grid[x][y]
+  } else {
+    return false;
+  }
 }
 function Cluster() {
   this.color = new THREE.Color( Math.random()*0xffffff );
@@ -209,14 +222,15 @@ Cluster.prototype.merge = function(other) {
 }
 function check_for_neighbors(voxel) {
   var x = voxel.grid.x;
-  var z = voxel.grid.y;
+  var y = voxel.grid.y;
+  var z = voxel.grid.z;
   neigh = 0
-  neigh += grid_has_element_at(x,   z, voxel);
-  neigh += grid_has_element_at(x-1, z, voxel);
-  neigh += grid_has_element_at(x+1, z, voxel);
-  neigh += grid_has_element_at(x, z-1, voxel);
-  neigh += grid_has_element_at(x, z+1, voxel);
-  console.log(neigh);
+  neigh += grid_has_element_at(x, y, z-1, voxel);
+  neigh += grid_has_element_at(x-1, y, z, voxel);
+  neigh += grid_has_element_at(x+1, y, z, voxel);
+  neigh += grid_has_element_at(x, y-1, z, voxel);
+  neigh += grid_has_element_at(x, y+1, z, voxel);
+  console.log("number of neigh", neigh);
   if(neigh == 0) {
     if(voxel.cluster) voxel.cluster.removeVoxel(voxel);
     free_voxel[voxel.id] = voxel;
@@ -250,8 +264,8 @@ function merge_clusters(v1, v2) {
   delete free_voxel[v1.id]
   delete free_voxel[v2.id]
 }
-function grid_has_element_at(x, y, voxel) {
-  if(grid[x] && grid[x][y] && grid[x][y].length) {
+function grid_has_element_at(x, y, z, voxel) {
+  if(grid[x] && grid[x][y] && grid[x][y][z]) {
     if(grid[x][y].indexOf(voxel) == -1) {
       merge_clusters(voxel, grid[x][y][0])
       return 1; 
