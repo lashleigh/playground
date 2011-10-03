@@ -8,12 +8,13 @@ var isMouseDown,onMouseDownPosition, onMouseDownTheta = 45, onMouseDownPhi =60, 
 
 var grid = [];
 var intervalID;
-var plane_size = 1500, voxel_dim = 175, grid_max = Math.floor(plane_size/voxel_dim); 
+var plane_size = 1500, voxel_dim = 75, grid_max = Math.floor(plane_size/voxel_dim); 
 plane_size = grid_max*voxel_dim;
 var half_plane = plane_size/2;
 var simulation;
 var one_neighbor = {}
 var free_voxel = {}
+var clusters = {}
 
 window.onload = function() {
   if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
@@ -27,6 +28,7 @@ function load_data_gui(sim) {
   var gui = new DAT.GUI();
   gui.add(sim, 'play'); // Specify a custom name.
   gui.add(sim, 'pause'); // Specify a custom name.
+  gui.add(sim, 'clear');
 }
 function init() {
   var that = this;
@@ -35,6 +37,8 @@ function init() {
   this.play = playSimulation;
   this.FPS = 10;
   this.rotation_func = be_still;
+  this.clear = reset_simulation;
+  create_grid();
 
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
@@ -54,14 +58,6 @@ function init() {
     }, 1000/that.FPS);
   }
  
-  // Grid
-  for(var i=0; i < grid_max; i++) {
-    grid[i] = [];
-    for(var j=0; j < grid_max; j++) {
-      grid[i][j] = [];
-    }
-  }
-
 	var geometry = new THREE.Geometry();
 	geometry.vertices.push( new THREE.Vertex( new THREE.Vector3( - half_plane, 0, 0 ) ) );
 	geometry.vertices.push( new THREE.Vertex( new THREE.Vector3( half_plane, 0, 0 ) ) );
@@ -147,7 +143,6 @@ function new_voxel(position) {
     voxel.grid.x = Math.floor((voxel.position.x+half_plane - voxel_dim/2)/voxel_dim);
     voxel.grid.y = Math.floor((voxel.position.z+half_plane - voxel_dim/2)/voxel_dim);
     voxel.grid.z = (voxel.position.y-voxel_dim/2)/voxel_dim;
-    console.log(voxel.grid.z);
     if(coords[4]) {
       merge_clusters(voxel, coords[4]);
     }
@@ -190,7 +185,6 @@ function to_coords(pos) {
     }
     return [x, height || voxel_dim/2, z, color, cluster || false];
   } else {
-    console.log("out of bounds");
     return false;
   }
   //return [x, y, z, color, cluster || false]; // This allows voxels to be above the surface level
@@ -230,9 +224,10 @@ function check_for_neighbors(voxel) {
   neigh += grid_has_element_at(x+1, y, z, voxel);
   neigh += grid_has_element_at(x, y-1, z, voxel);
   neigh += grid_has_element_at(x, y+1, z, voxel);
-  console.log("number of neigh", neigh);
   if(neigh == 0) {
-    if(voxel.cluster) voxel.cluster.removeVoxel(voxel);
+    if(voxel.cluster) {
+      voxel.cluster.removeVoxel(voxel);
+    }
     free_voxel[voxel.id] = voxel;
     delete one_neighbor[voxel.id];
   } else if(neigh == 1) {
@@ -242,6 +237,54 @@ function check_for_neighbors(voxel) {
     delete free_voxel[voxel.id]
     delete one_neighbor[voxel.id]
   }
+}
+function num_neighbors(x, y, z) {
+  var num = 0;
+  num += grid[x] && grid[x][y] && grid[x][y][z-1] ? 1 : 0 
+  num += grid[x] && grid[x][y] && grid[x][y][z+1] ? 1 : 0 
+  x = x-1;
+  num += grid[x] && grid[x][y] && grid[x][y][z] ? 1 : 0 
+  x = x+2;
+  num += grid[x] && grid[x][y] && grid[x][y][z] ? 1 : 0 
+  x = x-1;
+  y = y-1;
+  num += grid[x] && grid[x][y] && grid[x][y][z] ? 1 : 0 
+  y = y+2
+  num += grid[x] && grid[x][y] && grid[x][y][z] ? 1 : 0 
+  return num;
+}
+function get_neighbors_of(x, y, z) {
+  var num = [];
+  if(z==0) {
+    num.push("bounds")
+  } else {
+    valid_coords(x,y,z-1) ? num.push(grid[x][y][z-1]) : num.push("bounds");
+  }
+  valid_coords(x,y,z+1) ? num.push(grid[x][y][z+1]) : num.push("bounds");
+  valid_coords(x-1,y) ? num.push(grid[x-1][y][z]) : num.push("bounds");
+  valid_coords(x+1,y) ? num.push(grid[x+1][y][z]) : num.push("bounds");
+  valid_coords(x,y-1) ? num.push(grid[x][y-1][z]) : num.push("bounds");
+  valid_coords(x,y+1) ? num.push(grid[x][y+1][z]) : num.push("bounds");
+  return num;
+}
+function all_six_neighbors(x, y, z) {
+  var num = [];
+  grid[x] && grid[x][y] && grid[x][y][z-1] ? num.push(grid[x][y][z-1]) : num.push(false);
+  grid[x] && grid[x][y] && grid[x][y][z+1] ? num.push(grid[x][y][z+1]) : num.push(false);
+  x = x-1;
+  grid[x] && grid[x][y] && grid[x][y][z] ? num.push(grid[x][y][z]) : num.push(false);
+  x = x+2;
+  grid[x] && grid[x][y] && grid[x][y][z] ? num.push(grid[x][y][z]) : num.push(false);
+  x = x-1;
+  y = y-1;
+  grid[x] && grid[x][y] && grid[x][y][z] ? num.push(grid[x][y][z]) : num.push(false);
+  y = y+2
+  grid[x] && grid[x][y] && grid[x][y][z] ? num.push(grid[x][y][z]) : num.push(false);
+  return num;
+}
+function valid_coords(x,y,z) {
+  //return grid[x] && grid[x][y] && z >= 0 //TODO check for upper z-bounds?
+  return grid[x] && grid[x][y];
 }
 function merge_clusters(v1, v2) {
   if(v1.cluster && v2.cluster) {
@@ -266,12 +309,8 @@ function merge_clusters(v1, v2) {
 }
 function grid_has_element_at(x, y, z, voxel) {
   if(grid[x] && grid[x][y] && grid[x][y][z]) {
-    if(grid[x][y].indexOf(voxel) == -1) {
-      merge_clusters(voxel, grid[x][y][0])
-      return 1; 
-    } else {
-      return 0;
-    }
+    merge_clusters(voxel, grid[x][y][0])
+    return 1; 
   } else {
     return 0;
   }
@@ -458,4 +497,26 @@ function num_voxels() {
     }
   }
   return num;
+}
+function reset_simulation() {
+  var num_other = (grid_max+1)*2 +1; //The lines and mesh of the plane
+  var v = scene.objects.splice(num_other, scene.objects.length-num_other)
+
+  for(var i=0; i< v.length; i++) {
+    scene.removeObject(v[i]);
+    delete v[i];
+  }
+  free_voxel = {};
+  one_neighbor = {};
+  grid = []; create_grid();
+  
+  render();
+}
+function create_grid() {
+  for(var i=0; i < grid_max; i++) {
+    grid[i] = [];
+    for(var j=0; j < grid_max; j++) {
+      grid[i][j] = [];
+    }
+  }
 }
