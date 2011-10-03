@@ -4,17 +4,16 @@ var projector, plane;
 var mouse2D, mouse3D, ray,
 rollOveredFace, isShiftDown = false,
 theta = 45, isCtrlDown = false;
-var isMouseDown,onMouseDownPosition, onMouseDownTheta = 45, onMouseDownPhi =60, phi = 60, radious = 1600;
+var isMouseDown,onMouseDownPosition, onMouseDownTheta = 45, onMouseDownPhi =60, phi = 60, radious = 2000;
 
-var voxels = [];
 var grid = [];
 var intervalID;
-var plane_size = 1000;
-var voxel_dim = 55;
-var grid_max = Math.floor(plane_size/voxel_dim); 
+var plane_size = 1000, voxel_dim = 55, grid_max = Math.floor(plane_size/voxel_dim); 
 plane_size = grid_max*voxel_dim;
 var half_plane = plane_size/2;
 var simulation;
+var one_neighbor = {}
+var free_voxel = {}
 
 window.onload = function() {
   if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
@@ -28,15 +27,6 @@ function load_data_gui(sim) {
   var gui = new DAT.GUI();
   gui.add(sim, 'play'); // Specify a custom name.
   gui.add(sim, 'pause'); // Specify a custom name.
-  gui.add(sim, 'camera_y').min(-4000).max(4000).onChange(function(newValue) {
-    camera.position.y = newValue; 
-  })
-  gui.add(sim, 'camera_x').min(-4000).max(4000).onChange(function(newValue) {
-    camera.position.x = newValue; 
-  })
-  gui.add(sim, 'camera_z').min(-4000).max(4000).onChange(function(newValue) {
-    camera.position.z = newValue; 
-  })
 }
 function init() {
   var that = this;
@@ -53,12 +43,7 @@ function init() {
     camera.position.x = radious * Math.sin( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
     camera.position.y = radious * Math.sin( phi * Math.PI / 360 );
     camera.position.z = radious * Math.cos( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
-  camera.target.position.y = 200;
-	//camera.position.y = 800;
-	//camera.position.z = 500;
-  this.camera_x = 600; // = camera;
-  this.camera_y = 600; // = camera;
-  this.camera_z = 600; // = camera;
+  camera.target.position.y = -200;
 
   scene = new THREE.Scene();
   
@@ -68,7 +53,6 @@ function init() {
       new_voxel();
     }, 1000/that.FPS);
   }
-
  
   // Grid
   for(var i=0; i < grid_max; i++) {
@@ -162,11 +146,12 @@ function new_voxel(position) {
     voxel.grid = {};
     voxel.grid.x = Math.floor((voxel.position.x+half_plane - voxel_dim/2)/voxel_dim);
     voxel.grid.y = Math.floor((voxel.position.z+half_plane - voxel_dim/2)/voxel_dim);
-    grid[voxel.grid.x][voxel.grid.y].push(voxel);
+    voxel.grid.z = 0;
     if(coords[4]) {
       merge_clusters(voxel, coords[4]);
     }
     check_for_neighbors(voxel);
+    grid[voxel.grid.x][voxel.grid.y].push(voxel); // Assigning to the grid last means the voxel doesn't match itself in check_for_neighbors
     scene.addObject( voxel );
     //render();
   }
@@ -231,8 +216,17 @@ function check_for_neighbors(voxel) {
   neigh += grid_has_element_at(x+1, z, voxel);
   neigh += grid_has_element_at(x, z-1, voxel);
   neigh += grid_has_element_at(x, z+1, voxel);
+  console.log(neigh);
   if(neigh == 0) {
-    voxel.cluster.removeVoxel(voxel);
+    if(voxel.cluster) voxel.cluster.removeVoxel(voxel);
+    free_voxel[voxel.id] = voxel;
+    delete one_neighbor[voxel.id];
+  } else if(neigh == 1) {
+    one_neighbor[voxel.id] = voxel;
+    delete free_voxel[voxel.id];
+  } else {
+    delete free_voxel[voxel.id]
+    delete one_neighbor[voxel.id]
   }
 }
 function merge_clusters(v1, v2) {
@@ -250,12 +244,20 @@ function merge_clusters(v1, v2) {
     c = new Cluster();
     c.addVoxel(v1);
     c.addVoxel(v2);
+    //one_neighbor[v1.id] = v1; This should have just gotten set
+    one_neighbor[v2.id] = v2
   }
+  delete free_voxel[v1.id]
+  delete free_voxel[v2.id]
 }
 function grid_has_element_at(x, y, voxel) {
   if(grid[x] && grid[x][y] && grid[x][y].length) {
-    merge_clusters(voxel, grid[x][y][0])
-    return 1; 
+    if(grid[x][y].indexOf(voxel) == -1) {
+      merge_clusters(voxel, grid[x][y][0])
+      return 1; 
+    } else {
+      return 0;
+    }
   } else {
     return 0;
   }
