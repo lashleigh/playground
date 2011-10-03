@@ -26,6 +26,11 @@ window.onload = function() {
 }
 function load_data_gui(sim) {
   var gui = new DAT.GUI();
+  gui.add(sim, 'FPS').min(0).max(30).onFinishChange(function(newValue) {
+    sim.pause();
+    sim.FPS = newValue;
+    sim.play();
+  });
   gui.add(sim, 'play'); // Specify a custom name.
   gui.add(sim, 'pause'); // Specify a custom name.
   gui.add(sim, 'clear');
@@ -149,7 +154,7 @@ function new_voxel(position) {
     check_for_neighbors(voxel);
     grid[voxel.grid.x][voxel.grid.y][voxel.grid.z] = voxel; // Assigning to the grid last means the voxel doesn't match itself in check_for_neighbors
     scene.addObject( voxel );
-    //render();
+    render();
   }
 }
 function new_random_coords() {
@@ -310,7 +315,6 @@ function merge_clusters(v1, v2) {
 }
 function grid_has_element_at(x, y, z, voxel) {
   if(grid[x] && grid[x][y] && grid[x][y][z]) {
-    console.log(x, y, z, grid[x][y][z])
     merge_clusters(voxel, grid[x][y][z])
     return 1; 
   } else {
