@@ -1,5 +1,5 @@
 var container, stats;
-var camera, scene, renderer;
+var camera, scene, canvas_renderer, webgl_renderer;
 var projector, plane;
 var mouse2D, mouse3D, ray,
 rollOveredFace, isShiftDown = false,
@@ -34,12 +34,30 @@ function load_data_gui(sim) {
   gui.add(sim, 'play'); // Specify a custom name.
   gui.add(sim, 'pause'); // Specify a custom name.
   gui.add(sim, 'clear');
+  gui.add(sim, 'use_canvas').name("Canvas Renderer").onChange(function(newValue) {
+    if(newValue) {
+      sim.renderer = canvas_renderer;
+      canvas_renderer.domElement.style.display = "block";
+      webgl_renderer.domElement.style.display = "none";
+      render();
+    } else {
+      sim.renderer = webgl_renderer;
+      canvas_renderer.domElement.style.display = "none";
+      webgl_renderer.domElement.style.display = "block";
+      render();
+    }
+    //simulation.renderer =   
+    //sim.renderer = new THREE.WebGLRenderer( { antialias: true } );
+  });
+
 }
 function init() {
   var that = this;
   this.intervalID;
   this.pause = function() {clearInterval(this.intervalID)};
   this.play = playSimulation;
+  this.use_canvas = false;
+  this.renderer;
   this.FPS = 10;
   this.rotation_func = be_still;
   this.clear = reset_simulation;
@@ -110,12 +128,24 @@ function init() {
 	directionalLight.position.normalize();
 	scene.addLight( directionalLight );
 
-	renderer = new THREE.CanvasRenderer();
-	//renderer = new THREE.WebGLRenderer( { antialias: true } );
-	//renderer = new THREE.SVGRenderer();
-	renderer.setSize( window.innerWidth, window.innerHeight );
-
-	container.appendChild(renderer.domElement);
+	//that.renderer = new THREE.SVGRenderer();
+  canvas_renderer = new THREE.CanvasRenderer();
+	canvas_renderer.setSize( window.innerWidth, window.innerHeight );
+  container.appendChild(canvas_renderer.domElement);
+  //Webgl renderer
+	webgl_renderer = new THREE.WebGLRenderer( { antialias: true } );
+	webgl_renderer.setSize( window.innerWidth, window.innerHeight );
+  webgl_renderer.domElement.style.position = "relative";
+  container.appendChild(webgl_renderer.domElement);
+  if(that.use_canvas) {
+    that.renderer = canvas_renderer;
+    canvas_renderer.domElement.style.display = "block";
+    webgl_renderer.domElement.style.display = "none";
+  } else {
+    that.renderer = webgl_renderer;
+    canvas_renderer.domElement.style.display = "none";
+    webgl_renderer.domElement.style.display = "block";
+  }
 
 	stats = new Stats();
 	stats.domElement.style.position = 'absolute';
@@ -133,6 +163,7 @@ function init() {
   document.addEventListener( 'mouseup', onDocumentMouseUp, false );
 
 }
+
 function new_voxel(position) {
   coords = position ? to_coords(position) : new_random_coords();
   var material = coords[3] || [ new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff, opacity: 0.8, shading: THREE.FlatShading } ), new THREE.MeshFaceMaterial() ];
@@ -349,7 +380,7 @@ function onDocumentMouseMove( event ) {
       camera.position.z = radious * Math.cos( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
       camera.updateMatrix();
   }
-  mouse3D = projector.unprojectVector( new THREE.Vector3( ( event.clientX / renderer.domElement.width ) * 2 - 1, - ( event.clientY / renderer.domElement.height ) * 2 + 1, 0.5 ), camera );
+  mouse3D = projector.unprojectVector( new THREE.Vector3( ( event.clientX / simulation.renderer.domElement.width ) * 2 - 1, - ( event.clientY / simulation.renderer.domElement.height ) * 2 + 1, 0.5 ), camera );
   ray.direction = mouse3D.subSelf( camera.position ).normalize();
 
 	mouse2D.x = ( event.clientX / window.innerWidth ) * 2 - 1;
@@ -417,7 +448,7 @@ function onDocumentKeyUp( event ) {
 }
 
 function save() {
-	window.open( renderer.domElement.toDataURL('image/png'), 'mywindow' );
+	window.open( simulation.renderer.domElement.toDataURL('image/png'), 'mywindow' );
 }
 
 //
@@ -445,7 +476,12 @@ function interact() {
 	}
 }
 function render() {
-	renderer.render( scene, camera );
+  /*if ( simulation.use_canvas ) {
+    canvas_renderer.render( scene, camera );
+  } else {
+    webgl_renderer.render( scene, camera );
+  }*/
+	simulation.renderer.render( scene, camera );
 }
 function render_OLD() {
 	//if ( isShiftDown ) {
@@ -471,7 +507,7 @@ function render_OLD() {
 	//camera.position.x = 0; //1400 * Math.sin( theta * Math.PI / 360 );
   //camera.position.z = 1900 * Math.cos( theta * Math.PI / 360 );
 
-	renderer.render( scene, camera );
+	simulation.renderer.render( scene, camera );
 }  
 function be_still() {
 }
