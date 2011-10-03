@@ -147,7 +147,7 @@ function new_voxel(position) {
       merge_clusters(voxel, coords[4]);
     }
     check_for_neighbors(voxel);
-    grid[voxel.grid.x][voxel.grid.y].push(voxel); // Assigning to the grid last means the voxel doesn't match itself in check_for_neighbors
+    grid[voxel.grid.x][voxel.grid.y][voxel.grid.z] = voxel; // Assigning to the grid last means the voxel doesn't match itself in check_for_neighbors
     scene.addObject( voxel );
     //render();
   }
@@ -183,7 +183,7 @@ function to_coords(pos) {
       color = v.materials;
       cluster = v;
     }
-    return [x, height || voxel_dim/2, z, color, cluster || false];
+    return [x, y, z, false, false];
   } else {
     return false;
   }
@@ -220,6 +220,7 @@ function check_for_neighbors(voxel) {
   var z = voxel.grid.z;
   neigh = 0
   neigh += grid_has_element_at(x, y, z-1, voxel);
+  neigh += grid_has_element_at(x, y, z+1, voxel);
   neigh += grid_has_element_at(x-1, y, z, voxel);
   neigh += grid_has_element_at(x+1, y, z, voxel);
   neigh += grid_has_element_at(x, y-1, z, voxel);
@@ -309,7 +310,8 @@ function merge_clusters(v1, v2) {
 }
 function grid_has_element_at(x, y, z, voxel) {
   if(grid[x] && grid[x][y] && grid[x][y][z]) {
-    merge_clusters(voxel, grid[x][y][0])
+    console.log(x, y, z, grid[x][y][z])
+    merge_clusters(voxel, grid[x][y][z])
     return 1; 
   } else {
     return 0;
