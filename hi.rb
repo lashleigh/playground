@@ -14,6 +14,9 @@ end
 get '/planets' do
   erb :planets
 end
+get '/voxel' do
+  erb :voxel
+end
 get '/hello' do
   "Hello, who are you?"
 end
