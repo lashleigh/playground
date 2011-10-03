@@ -4,22 +4,25 @@ var projector, plane;
 var mouse2D, mouse3D, ray,
 rollOveredFace, isShiftDown = false,
 theta = 45, isCtrlDown = false;
+var isMouseDown,onMouseDownPosition, onMouseDownTheta = 45, onMouseDownPhi =60, phi = 60, radious = 1600;
+
 var voxels = [];
 var grid = [];
 var intervalID;
-var plane_size = 1500;
-var voxel_dim = 75
+var plane_size = 1000;
+var voxel_dim = 55;
 var grid_max = Math.floor(plane_size/voxel_dim); 
 plane_size = grid_max*voxel_dim;
 var half_plane = plane_size/2;
 var simulation;
+
 window.onload = function() {
   if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
   simulation = new init();
   load_data_gui(simulation);
   //init()
-  animate();
+  //animate();
 }
 function load_data_gui(sim) {
   var gui = new DAT.GUI();
@@ -46,13 +49,16 @@ function init() {
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
 
-	camera = new THREE.Camera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
-	camera.position.y = 800;
-	camera.position.z = 500;
-  camera.target.position.y = -voxel_dim;
-  this.camera_x = 800; // = camera;
-  this.camera_y = 800; // = camera;
-  this.camera_z = 800; // = camera;
+	camera = new THREE.Camera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+    camera.position.x = radious * Math.sin( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+    camera.position.y = radious * Math.sin( phi * Math.PI / 360 );
+    camera.position.z = radious * Math.cos( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+  camera.target.position.y = 200;
+	//camera.position.y = 800;
+	//camera.position.z = 500;
+  this.camera_x = 600; // = camera;
+  this.camera_y = 600; // = camera;
+  this.camera_z = 600; // = camera;
 
   scene = new THREE.Scene();
   
@@ -131,10 +137,15 @@ function init() {
 	stats.domElement.style.top = '0px';
 	container.appendChild( stats.domElement );
 
-	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+  // Mouse events 
 	document.addEventListener( 'keydown', onDocumentKeyDown, false );
 	document.addEventListener( 'keyup', onDocumentKeyUp, false );
+  
+  onMouseDownPosition = new THREE.Vector2();
+
+	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+  document.addEventListener( 'mouseup', onDocumentMouseUp, false );
 
 }
 function new_voxel(position) {
@@ -157,6 +168,7 @@ function new_voxel(position) {
     }
     check_for_neighbors(voxel);
     scene.addObject( voxel );
+    //render();
   }
 }
 function new_random_coords() {
@@ -181,14 +193,16 @@ function to_coords(pos) {
   var grid_x = (x-voxel_dim/2 + half_plane)/voxel_dim
   var grid_y = (z-voxel_dim/2 + half_plane)/voxel_dim 
 
-  var color, cluster;
+  var color, height, cluster;
   var stack = grid[grid_x][grid_y];
   if(stack.length > 0) {
     var v = stack[stack.length-1];
+    height = v.position.y + voxel_dim;
     color = v.materials;
     cluster = v;
   }
-  return [x, y, z, color, cluster || false];
+  return [x, height || voxel_dim/2, z, color, cluster || false];
+  //return [x, y, z, color, cluster || false]; // This allows voxels to be above the surface level
 }
 function Cluster() {
   this.color = new THREE.Color( Math.random()*0xffffff );
@@ -247,16 +261,43 @@ function grid_has_element_at(x, y, voxel) {
   }
 }
 
-function onDocumentMouseMove( event ) {
-
+function onDocumentMouseMove_OLD( event ) {
 	event.preventDefault();
-
 	mouse2D.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 	mouse2D.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
 }
 
 function onDocumentMouseDown( event ) {
+    event.preventDefault();
+    isMouseDown = true;
+    onMouseDownTheta = theta;
+    onMouseDownPhi = phi;
+    onMouseDownPosition.x = event.clientX;
+    onMouseDownPosition.y = event.clientY;
+}
+function onDocumentMouseMove( event ) {
+  event.preventDefault();
+  if ( isMouseDown ) {
+      theta = - ( ( event.clientX - onMouseDownPosition.x ) * 0.5 ) + onMouseDownTheta;
+      phi = ( ( event.clientY - onMouseDownPosition.y ) * 0.5 ) + onMouseDownPhi;
+
+      phi = Math.min( 180, Math.max( 0, phi ) );
+
+      camera.position.x = radious * Math.sin( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+      camera.position.y = radious * Math.sin( phi * Math.PI / 360 );
+      camera.position.z = radious * Math.cos( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+      camera.updateMatrix();
+  }
+  mouse3D = projector.unprojectVector( new THREE.Vector3( ( event.clientX / renderer.domElement.width ) * 2 - 1, - ( event.clientY / renderer.domElement.height ) * 2 + 1, 0.5 ), camera );
+  ray.direction = mouse3D.subSelf( camera.position ).normalize();
+
+	mouse2D.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse2D.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+  
+  interact();
+  render();
+}
+function onDocumentMouseDown_OLD( event ) {
 	event.preventDefault();
 	var intersects = ray.intersectScene( scene );
 
@@ -270,6 +311,34 @@ function onDocumentMouseDown( event ) {
       new_voxel(position)
 		}
 	}
+}
+function onDocumentMouseUp( event ) {
+  event.preventDefault();
+  isMouseDown = false;
+  onMouseDownPosition.x = event.clientX - onMouseDownPosition.x;
+  onMouseDownPosition.y = event.clientY - onMouseDownPosition.y;
+
+  if ( onMouseDownPosition.length() > 5 ) {
+      return;
+  }
+  var intersect, intersects = ray.intersectScene( scene );
+
+  if ( intersects.length > 0 ) {
+    intersect = intersects[ 0 ]; //.object == brush ? intersects[ 1 ] : intersects[ 0 ];
+    if ( intersect ) {
+      if ( isShiftDown ) {
+        if ( intersect.object != plane ) {
+           scene.removeObject( intersect.object );
+        }
+      } else {
+        var position = new THREE.Vector3().add( intersects[ 0 ].point, intersects[ 0 ].object.matrixRotationWorld.multiplyVector3( intersects[ 0 ].face.normal.clone() ) );
+        //var position = new THREE.Vector3().add( intersect.point, intersect.object.matrixRotation.transform( intersect.face.normal.clone() ) );
+        new_voxel(position);
+      }
+    }
+  }
+  interact();
+  render();
 }
 
 function onDocumentKeyDown( event ) {
@@ -297,11 +366,30 @@ function animate() {
 	render();
 	stats.update();
 }
+function interact() {
+	mouse3D = projector.unprojectVector( mouse2D.clone(), camera );
+	ray.direction = mouse3D.subSelf( camera.position ).normalize();
 
-function render() {
-	if ( isShiftDown ) {
-		theta += mouse2D.x * 3;
+	var intersects = ray.intersectScene( scene );
+
+	if ( intersects.length > 0 ) {
+		if ( intersects[ 0 ].face != rollOveredFace ) {
+			if ( rollOveredFace ) rollOveredFace.materials = [];
+			rollOveredFace = intersects[ 0 ].face;
+			rollOveredFace.materials = [ new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.5 } ) ];
+		}
+	} else if ( rollOveredFace ) {
+		 rollOveredFace.materials = [];
+		 rollOveredFace = null;
 	}
+}
+function render() {
+	renderer.render( scene, camera );
+}
+function render_OLD() {
+	//if ( isShiftDown ) {
+	//	theta += mouse2D.x * 3;
+	//}
 
 	mouse3D = projector.unprojectVector( mouse2D.clone(), camera );
 	ray.direction = mouse3D.subSelf( camera.position ).normalize();
@@ -338,4 +426,20 @@ function no_x() {
   camera.position.y = plane_size * Math.sin( theta * Math.PI / 360 );
   camera.position.z = plane_size * Math.cos( theta * Math.PI / 360 ); 
 }
-
+function lots_of_voxels() {
+  var i = 0;
+  while(i < 1000) {
+    new_voxel();
+    i++;
+    if(i % 10 == 0) { render()};
+  }
+}
+function num_voxels() {
+  var num=0;
+  for(var i=0; i< grid_max; i++) {
+    for(var j=0; j < grid_max; j++) {
+      num += grid[i][j].length;
+    }
+  }
+  return num;
+}
