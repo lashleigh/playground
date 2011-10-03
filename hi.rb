@@ -14,24 +14,8 @@ end
 get '/planets' do
   erb :planets
 end
-get '/voxel' do
-  erb :voxel
-end
-get '/hello' do
-  "Hello, who are you?"
-end
-get '/hello/devil' do
-  "Ahhh, run for your lives!"
-end
-get '/hello/:name' do
-  # matches "GET /hello/foo" and "GET /hello/bar"
-  # params[:name] is 'foo' or 'bar'
-  @name = params[:name]
-  erb :name
-end
-get '/say/*/to/*' do
-  # matches /say/hello/to/world
-  params[:splat] # => ["hello", "world"]
+get '/voxels' do
+  erb :voxels
 end
 
 get '/application.css' do
