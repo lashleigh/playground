@@ -1,1 +1,110 @@
-<script type="text/javascript" src="js/route.js"></script>
+<div style="clear:both;">
+<button onclick="randomMatch()">Random match</button>
+<button onclick="stop()">Stop worker</button></br>
+<output id="result"></output>
+</div>
+
+<script>
+  var CANVAS_SIZE = 500;
+  var STEP = 2;
+  var MAX = Math.floor(CANVAS_SIZE/STEP);
+  var HALF_MAX = Math.floor(MAX/2);
+  var TIME = 0;
+  var COLORS = ['#F00', '#F40', '#F80', '#FC0', '#FF0', 
+                '#8F0', '#4F0', '#0F0', '#0F4', '#0F8', 
+                '#0FF', '#0CF', '#08F', '#04F', '#00F', 
+                '#80F', '#C0F', '#F0F', '#F0C', '#F08']; 
+  var COLOR_INDEX = 0;
+  var edge = 25; //Math.floor(HALF_MAX/2);
+  var idle = true;
+
+  // canvas element and 2D context
+  var canvas = document.createElement('canvas');
+  canvas.width = CANVAS_SIZE;
+  canvas.height = CANVAS_SIZE;
+  document.body.appendChild(canvas);
+  var context = canvas.getContext('2d');
+
+  context.fillStyle="rgb(255,255,255)";
+  context.fillRect(0,0, CANVAS_SIZE, CANVAS_SIZE);
+
+
+  var grid = [];
+  for(var i=0; i < MAX; i++) {
+    grid[i] = [];
+    for(var j=0; j < MAX; j++) {
+      grid[i][j] = 0;
+    }  
+  }
+
+  /*for(var i=0; i<MAX; i++) {
+    grid[i][0] = 1;
+    draw_point(i, j);
+  }*/
+  for(var i=HALF_MAX-2; i<HALF_MAX+2; i++) {
+    for(var j=HALF_MAX-2; j<HALF_MAX+2; j++) {
+      grid[i][j] = 0;
+      draw_point(i, j);
+    }
+  }
+  function stop() {
+    worker.terminate()
+  }
+  function randomMatch() {
+    idle = false;
+    document.getElementById('result').textContent = "computing";
+    worker.postMessage({'cmd': 'grid', 'grid':grid, 'dim':MAX, 'edge':edge});
+  }
+
+  var worker = new Worker('js/worker.js');
+
+  worker.addEventListener('message', function(e) {
+    var res = e.data;
+    edge = res.edge;
+    console.log(edge);
+    TIME+=1;
+    COLOR_INDEX = (COLOR_INDEX+1) % COLORS.length
+    for(var i = 0; i < res.coords.length; i++) {
+      draw_point(res.coords[i].x, res.coords[i].y); //grid[res.x][res.y] += 1;
+    }
+    document.getElementById('result').textContent = res.iter+" and coords length: "+res.coords.length;
+    if(res.iter != 0) {
+      idle = true;
+    }
+  }, false);
+
+  function draw_point(x,y) {
+    if(grid[x][y]==0) {
+    var c = context;
+    c.fillStyle = "#555"; //COLORS[COLOR_INDEX]; //this.color(); // "rgba(5, 5, 5, "+this.level/10.0+")"
+    c.beginPath();
+    c.rect(x*STEP, y*STEP, STEP, STEP)
+    c.closePath();
+    c.fill();
+    }
+    grid[x][y] += 1;
+  }
+  var intervalID;
+  function playSim() {
+    intervalID = setInterval(function() {
+      if(idle) {
+        randomMatch();
+      }
+    }, 1000/3);
+  }
+  function pause() {
+  clearInterval(intervalID)
+  }
+  
+function random_coords(left, right) {
+  var x, y;
+  if(Math.random() > 0.5) {
+    x = Math.random() > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
+    y = Math.floor(Math.random()*(right-left))+left; // > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
+  } else {
+    y = Math.random() > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
+    x = Math.floor(Math.random()*(right-left))+left; // > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
+  }
+  return {'x':x,'y':y};
+}
+</script>
