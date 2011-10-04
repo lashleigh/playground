@@ -46,7 +46,7 @@
     edge = res.edge;
     //console.log(edge, Math.sqrt(res.max_dist));
     for(var i = 0; i < res.coords.length; i++) {
-      if(i%10===0) { TIME += 2; COLOR = makeColor(TIME);}
+      if(i%25===0) { TIME += 1; COLOR = makeColor(TIME);}
       var x = res.coords[i].x;
       var y = res.coords[i].y;
       grid[x][y] += 1;
