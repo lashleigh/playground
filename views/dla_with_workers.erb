@@ -41,7 +41,7 @@
   worker.addEventListener('message', function(e) {
     var res = e.data;
     edge = res.edge;
-    TIME += 3;
+    TIME += 15;
     COLOR = makeColor(TIME);
     for(var i = 0; i < res.coords.length; i++) {
       draw_point(res.coords[i].x, res.coords[i].y); //grid[res.x][res.y] += 1;
@@ -68,7 +68,7 @@ function playSim(iters) {
   create_nuclei();
   intervalID = setInterval(function() {
     if(idle) {
-      randomMatch(iters);
+      randomMatch(iters || 75);
     }
   }, 1000/30);
 }
