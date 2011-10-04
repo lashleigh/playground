@@ -26,23 +26,7 @@
 
 
   var grid = [];
-  for(var i=0; i < MAX; i++) {
-    grid[i] = [];
-    for(var j=0; j < MAX; j++) {
-      grid[i][j] = 0;
-    }  
-  }
-
-  /*for(var i=0; i<MAX; i++) {
-    grid[i][0] = 1;
-    draw_point(i, j);
-  }*/
-  for(var i=HALF_MAX-2; i<HALF_MAX+2; i++) {
-    for(var j=HALF_MAX-2; j<HALF_MAX+2; j++) {
-      grid[i][j] = 0;
-      draw_point(i, j);
-    }
-  }
+  reset_grid()
   function stop() {
     worker.terminate()
   }
@@ -80,16 +64,17 @@
     grid[x][y] += 1;
   }
   var intervalID;
-  function playSim(iters) {
-    intervalID = setInterval(function() {
-      if(idle) {
-        randomMatch(iters);
-      }
-    }, 1000/30);
-  }
-  function pause() {
+function playSim(iters) {
+  create_nuclei();
+  intervalID = setInterval(function() {
+    if(idle) {
+      randomMatch(iters);
+    }
+  }, 1000/30);
+}
+function pause() {
   clearInterval(intervalID)
-  }
+}
   
 function random_coords(l, r) {
   var left = l !==undefined ? l : left_edge();
@@ -134,5 +119,27 @@ function makeColor(index) {
   function blue(i)  { return color(i + 1020);  }
 
   return "#" + red(index) + green(index) + blue(index);
+}
+function clear() {
+  reset_grid();
+  create_nuclei();
+  context.fillStyle="rgb(255,255,255)";
+  context.fillRect(0,0, CANVAS_SIZE, CANVAS_SIZE);
+}
+function reset_grid() {
+  for(var i=0; i < MAX; i++) {
+    grid[i] = [];
+    for(var j=0; j < MAX; j++) {
+      grid[i][j] = 0;
+    }  
+  }
+}
+function create_nuclei() {
+  for(var i=HALF_MAX-2; i<HALF_MAX+2; i++) {
+    for(var j=HALF_MAX-2; j<HALF_MAX+2; j++) {
+      grid[i][j] = 0;
+      draw_point(i, j);
+    }
+  }
 }
 </script>
