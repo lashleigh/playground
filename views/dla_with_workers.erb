@@ -1,13 +1,14 @@
-<div style="clear:both;">
+<div id="functions" style="clear:both;">
 <button onclick="startSimulation()">Start or restart</button>
 <button onclick="play()">Play</button></br>
 <button onclick="pause()">Pause</button></br>
-<output id="result"></output>
-<div id="time"></div>
+<button onclick="save()">Save</button></br>
 </div>
 
 <script>
+var simulations = [];  
 var sim;
+var sim_stats = '<div class="result"></div>'+'<div class="time"></div>';
 
 function init(size, pixels_per) {
   var that = this;
@@ -32,10 +33,14 @@ function init(size, pixels_per) {
   this.clear_canvas = clear;
 
   // canvas element and 2D context
+
   that.canvas = document.createElement('canvas');
   that.canvas.width = that.CANVAS_SIZE;
   that.canvas.height = that.CANVAS_SIZE;
-  document.body.appendChild(that.canvas);
+  $(that.canvas).addClass("mycanvas");
+  //document.body.appendChild(that.canvas);
+  $("#functions").after(that.canvas);
+  $(that.canvas).before(sim_stats);
   that.context = that.canvas.getContext('2d');
 
   that.context.fillStyle="rgb(255,255,255)";
@@ -43,7 +48,7 @@ function init(size, pixels_per) {
 
   function randomMatch(iters) {
     that.idle = false;
-    document.getElementById('result').textContent = "computing";
+    $('.result').first().text("computing");
     worker.postMessage({'cmd': 'grid', 'grid':that.grid, 'dim':that.MAX, 'edge':that.edge, 'num':iters});
   }
 
@@ -52,7 +57,7 @@ function init(size, pixels_per) {
   worker.addEventListener('message', function(e) {
     var res = e.data;
     that.edge = res.edge;
-    console.log(that.edge, Math.sqrt(res.max_dist));
+    //console.log(that.edge, Math.sqrt(res.max_dist));
     for(var i = 0; i < res.coords.length; i++) {
       if(i%25===0) { TIME += 1; that.COLOR = makeColor(TIME);}
       var x = res.coords[i].x;
@@ -60,12 +65,12 @@ function init(size, pixels_per) {
       that.grid[x][y] += 1;
       draw_point(that, x, y); 
     }
-    document.getElementById('result').textContent = res.iter+" and coords length: "+res.coords.length;
+    $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
     if((res.iter != 0) && (that.edge < that.HALF_MAX)) {
       that.idle = true;
     } else {
       that.finish_time = new Date();
-      document.getElementById('time').textContent = "Finished in: "+(that.finish_time-that.start_time)/1000.0+" sec";
+      $(".time").first().text("Finished in: "+(that.finish_time-that.start_time)/1000.0+" sec");
     }
   }, false);
 } 
@@ -114,7 +119,7 @@ function makeColor(index) {
   return "#" + red(index) + green(index) + blue(index);
 }
 function startSimulation(iters, SIZE, pixels_per) {
-  sim = new init(SIZE || 500, pixels_per || 5)
+  sim = new init(SIZE || 600, pixels_per || 3)
   sim.start_time = new Date();
   clear(sim);
   play(iters, sim);
@@ -139,6 +144,10 @@ function clear(sim) {
   sim.context.fillStyle="rgb(255,255,255)";
   sim.context.fillRect(0,0, sim.CANVAS_SIZE, sim.CANVAS_SIZE);
 }
+function save() {
+  window.open( sim.canvas.toDataURL('image/png'), 'mywindow' );
+}
+
 function reset_grid(sim) {
   for(var i=0; i < sim.MAX; i++) {
     sim.grid[i] = [];
