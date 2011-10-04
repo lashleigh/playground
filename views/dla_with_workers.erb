@@ -164,6 +164,6 @@ function random_from_polar(radius) {
   return {'x':x, 'y':y};
 }
 function draw_circle(radius) {
-  for(var i=0; i<100; i++) {c = random_from_polar(radius, MAX); draw_point(c.x, c.y)}
+  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); draw_point(c.x, c.y)}
 }
 </script>
