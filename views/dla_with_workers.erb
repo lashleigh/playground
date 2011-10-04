@@ -1,13 +1,13 @@
 <div style="clear:both;">
-<button onclick="randomMatch()">Random match</button>
-<button onclick="stop()">Stop worker</button></br>
+<button onclick="playSim()">Start</button>
+<button onclick="pause()">Pause</button></br>
 <output id="result"></output>
 <div id="time"></div>
 </div>
 
 <script>
-  var CANVAS_SIZE = 1800;
-  var STEP = 2;
+  var CANVAS_SIZE = 1500;
+  var STEP = 3;
   var MAX = Math.floor(CANVAS_SIZE/STEP);
   var HALF_MAX = Math.floor(MAX/2);
   var TIME = 765;
@@ -44,18 +44,16 @@
   worker.addEventListener('message', function(e) {
     var res = e.data;
     edge = res.edge;
-    console.log(edge);
-    //TIME += 15;
-    //COLOR = makeColor(TIME);
+    console.log(edge, res.max_dist);
     for(var i = 0; i < res.coords.length; i++) {
       if(i%10===0) { TIME += 2; COLOR = makeColor(TIME);}
       var x = res.coords[i].x;
       var y = res.coords[i].y;
-      draw_point(x, y); 
       grid[x][y] += 1;
+      draw_point(x, y); 
     }
     document.getElementById('result').textContent = res.iter+" and coords length: "+res.coords.length;
-    if((res.iter != 0) && (edge <= HALF_MAX)) {
+    if((res.iter != 0) && (edge < HALF_MAX)) {
       idle = true;
     } else {
       finish_time = new Date();
@@ -63,8 +61,8 @@
     }
   }, false);
 
-  function draw_point(x,y) {
-    if(grid[x][y]==0) {
+  function draw_point(x,y,exception) {
+    if(grid[x][y]==1 || exception) {
     var c = context;
     c.fillStyle = COLOR || makeColor(TIME) //: "#555"; //COLORS[COLOR_INDEX]; //this.color(); // "rgba(5, 5, 5, "+this.level/10.0+")"
     c.beginPath();
@@ -72,6 +70,14 @@
     c.closePath();
     c.fill();
     }
+  }
+  function clear_point(x,y) {
+    var c = context;
+    c.fillStyle = '#fff'; 
+    c.beginPath();
+    c.rect(x*STEP, y*STEP, STEP, STEP)
+    c.closePath();
+    c.fill();
   }
   var intervalID;
 function playSim(iters) {
@@ -89,26 +95,6 @@ function pause() {
   clearInterval(intervalID)
 }
   
-function random_coords(l, r) {
-  var left = l !==undefined ? l : left_edge();
-  var right = r || right_edge();
-  var x, y;
-  var p = Math.floor(Math.random()*4);
-  switch(p) {
-    case 0: x=left;  y= Math.floor(Math.random()*(right-left))+left; break;
-    case 1: x=right; y= Math.floor(Math.random()*(right-left))+left; break;
-    case 2: y=left;  x= Math.floor(Math.random()*(right-left))+left; break;
-    case 3: y=right; x= Math.floor(Math.random()*(right-left))+left; break;
-  }
-  //return {'x':x,'y':y};
-  return [x,y];
-}
-function left_edge() {
-  return Math.max(MAX/2-edge, 0);
-}
-function right_edge() {
-  return Math.min(HALF_MAX+edge, MAX-1);
-}
 // Do Awesome Things With Colors!
 function makeColor(index) {
   function color(i) {
@@ -164,6 +150,9 @@ function random_from_polar(radius) {
   return {'x':x, 'y':y};
 }
 function draw_circle(radius) {
-  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); draw_point(c.x, c.y)}
+  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); draw_point(c.x, c.y, true)}
+}
+function clear_circle(radius) {
+  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); clear_point(c.x, c.y)}
 }
 </script>

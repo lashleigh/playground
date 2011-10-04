@@ -13,6 +13,7 @@ self.addEventListener('message', function(e) {
       var iter = 0;
       var coords = [];
       var edge = data.edge;
+      var max_dist = 0;
       for(var i=0; i < data.num; i++) {
         var c = random_from_polar(edge, data.dim);
         var x = c.x; var y = c.y;
@@ -31,13 +32,15 @@ self.addEventListener('message', function(e) {
           }
           iter+=1;
         }
-        if((edge*edge - (x-data.dim/2)*(x-data.dim/2)+(y-data.dim/2)*(y-data.dim/2)) < 2500) {
-          edge += 50;
+        var dist = Math.sqrt((x-data.dim/2)*(x-data.dim/2)+(y-data.dim/2)*(y-data.dim/2));
+        if((edge-dist)*(edge-dist) <= 100) {
+          edge += 10;
         }
+        if(dist > max_dist) {max_dist = dist};
         grid[x][y] += 1;
         coords.push({'x':x, 'y':y});
       }
-      self.postMessage({'iter':iter, 'coords':coords, 'edge':edge}); break;
+      self.postMessage({'iter':iter, 'coords':coords, 'edge':edge, 'max_dist':max_dist}); break;
     default:
       self.postMessage('Unknown command: ' + data.msg);
   };
@@ -46,11 +49,12 @@ self.addEventListener('message', function(e) {
 function too_far_away(x, y, radius, dim) {
   x = x-dim/2;
   y = y-dim/2;
-  return x*x+y*y - radius*radius > 2500;
+  r = Math.sqrt(x*x+y*y)
+  return (radius-r)*(radius-r) > 1600;
 }
 function random_from_polar(radius, dim) {
   var angle = Math.random()*2*Math.PI;
-  radius = Math.min(radius, dim/2);
+  //radius = Math.min(radius, dim/2);
   var x = Math.floor(radius*Math.cos(angle))+dim/2
   var y = Math.floor(radius*Math.sin(angle))+dim/2
   return {'x':x, 'y':y};
