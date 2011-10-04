@@ -49,8 +49,8 @@ self.addEventListener('message', function(e) {
 function too_far_away(x, y, radius, dim) {
   x = x-dim/2;
   y = y-dim/2;
-  r = Math.sqrt(x*x+y*y)
-  return (radius-r)*(radius-r) > 1600;
+  r = Math.sqrt(x*x+y*y);
+  return false; //(r-radius)*(r-radius) > 2500;
 }
 function random_from_polar(radius, dim) {
   var angle = Math.random()*2*Math.PI;
