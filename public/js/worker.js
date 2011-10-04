@@ -24,15 +24,15 @@ self.addEventListener('message', function(e) {
             case 2: y = y+1; break;
             case 3: y = y-1; break;
           }
-          if(!valid_coords(grid,x,y)) {
+          if(!valid_coords(grid,x,y) || too_far_away(x,y,edge, data.dim)) {
             c = random_from_polar(edge, data.dim);
             x = c.x;
             y = c.y;
           }
           iter+=1;
         }
-        if(edge*edge - x*x+y*y < 10) {
-          edge += 10;
+        if((edge*edge - (x-data.dim/2)*(x-data.dim/2)+(y-data.dim/2)*(y-data.dim/2)) < 2500) {
+          edge += 50;
         }
         grid[x][y] += 1;
         coords.push({'x':x, 'y':y});
@@ -43,6 +43,11 @@ self.addEventListener('message', function(e) {
   };
 }, false);
 
+function too_far_away(x, y, radius, dim) {
+  x = x-dim/2;
+  y = y-dim/2;
+  return x*x+y*y - radius*radius > 2500;
+}
 function random_from_polar(radius, dim) {
   var angle = Math.random()*2*Math.PI;
   radius = Math.min(radius, dim/2);
@@ -66,20 +71,4 @@ function coord_has_neighbor(grid, x, y) {
   }
   return num;
 }
-function left_edge(dim, edge) {
-  return Math.max(dim/2-edge, 0);
-}
-function right_edge(dim, edge) {
-  return Math.min(dim/2+edge, dim-1);
-}
-function random_coords(left, right) {
-  var x, y;
-  var p = Math.floor(Math.random()*4);
-  switch(p) {
-    case 0: x=left;  y= Math.floor(Math.random()*(right-left))+left; break;
-    case 1: x=right; y= Math.floor(Math.random()*(right-left))+left; break;
-    case 2: y=left;  x= Math.floor(Math.random()*(right-left))+left; break;
-    case 3: y=right; x= Math.floor(Math.random()*(right-left))+left; break;
-  }
-  return {'x':x,'y':y};
-}
+

@@ -44,6 +44,7 @@
   worker.addEventListener('message', function(e) {
     var res = e.data;
     edge = res.edge;
+    console.log(edge);
     //TIME += 15;
     //COLOR = makeColor(TIME);
     for(var i = 0; i < res.coords.length; i++) {
@@ -55,7 +56,6 @@
       idle = true;
     } else {
       finish_time = new Date();
-      console.log((finish_time-start_time)/1000.0);
       document.getElementById('time').textContent = "Finished in: "+(finish_time-start_time)/1000.0+" sec";
     }
   }, false);
