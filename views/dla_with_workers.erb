@@ -49,7 +49,10 @@
     //COLOR = makeColor(TIME);
     for(var i = 0; i < res.coords.length; i++) {
       if(i%10===0) { TIME += 2; COLOR = makeColor(TIME);}
-      draw_point(res.coords[i].x, res.coords[i].y); //grid[res.x][res.y] += 1;
+      var x = res.coords[i].x;
+      var y = res.coords[i].y;
+      draw_point(x, y); 
+      grid[x][y] += 1;
     }
     document.getElementById('result').textContent = res.iter+" and coords length: "+res.coords.length;
     if((res.iter != 0) && (edge <= HALF_MAX)) {
@@ -69,7 +72,6 @@
     c.closePath();
     c.fill();
     }
-    grid[x][y] += 1;
   }
   var intervalID;
 function playSim(iters) {
@@ -149,9 +151,19 @@ function reset_grid() {
 function create_nuclei() {
   for(var i=HALF_MAX-2; i<HALF_MAX+2; i++) {
     for(var j=HALF_MAX-2; j<HALF_MAX+2; j++) {
-      grid[i][j] = 0;
+      grid[i][j] = 1;
       draw_point(i, j);
     }
   }
+}
+function random_from_polar(radius) {
+  var angle = Math.random()*2*Math.PI;
+  radius = Math.min(radius, MAX/2);
+  var x = Math.floor(radius*Math.cos(angle))+MAX/2
+  var y = Math.floor(radius*Math.sin(angle))+MAX/2
+  return {'x':x, 'y':y};
+}
+function draw_circle(radius) {
+  for(var i=0; i<100; i++) {c = random_from_polar(radius, MAX); draw_point(c.x, c.y)}
 }
 </script>
