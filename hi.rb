@@ -17,6 +17,9 @@ end
 get '/voxels' do
   erb :voxels
 end
+get '/dla' do
+  erb :dla_with_workers
+end
 
 get '/application.css' do
   less :application
