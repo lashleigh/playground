@@ -33,10 +33,7 @@ self.addEventListener('message', function(e) {
           iter+=1;
         }
         var dist = (x-data.dim/2)*(x-data.dim/2)+(y-data.dim/2)*(y-data.dim/2);
-        if(edge*edge - dist <= 100) { //(edge-dist)*(edge-dist) <= 100) {
-          edge += 10;
-        }
-        if(dist > max_dist) {max_dist = dist};
+        if(dist > max_dist) {max_dist = dist; edge = Math.sqrt(dist)+25; }
         grid[x][y] += 1;
         coords.push({'x':x, 'y':y});
       }
@@ -51,7 +48,7 @@ function too_far_away(x, y, radius, dim) {
   y = y-dim/2;
   r_squared = x*x+y*y;
   theta = Math.atan(x,y);
-  return r_squared > radius*radius + 20000; //false; //(r-radius)*(r-radius) > 2500;
+  return r_squared > radius*radius + 10000; //false; //(r-radius)*(r-radius) > 2500;
 }
 function random_from_polar(radius, dim) {
   var angle = Math.random()*2*Math.PI;

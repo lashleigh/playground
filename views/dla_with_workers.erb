@@ -1,100 +1,94 @@
 <div style="clear:both;">
-<button onclick="playSim()">Start</button>
+<button onclick="startSimulation()">Start or restart</button>
+<button onclick="play()">Play</button></br>
 <button onclick="pause()">Pause</button></br>
 <output id="result"></output>
 <div id="time"></div>
 </div>
 
 <script>
-  var CANVAS_SIZE = 1800;
-  var STEP = 2;
-  var MAX = Math.floor(CANVAS_SIZE/STEP);
-  var HALF_MAX = Math.floor(MAX/2);
+var sim;
+
+function init(size, pixels_per) {
+  var that = this;
+
   var TIME = 765;
-  var COLOR;
-  var edge = 25; //Math.floor(HALF_MAX/2);
-  var idle = true;
-  var start_time;
-  var finish_time;
+  this.COLOR = makeColor(TIME);
+  this.CANVAS_SIZE = size || 1800;
+  this.STEP = pixels_per || 2;
+
+  this.MAX = Math.floor(that.CANVAS_SIZE/this.STEP);
+  this.HALF_MAX = Math.floor(this.MAX/2);
+  this.idle = true;
+  this.grid = [];
+  this.edge = 25; //Math.floor(HALF_MAX/2);
+
+  this.start_time;
+  this.finish_time;
+  this.intervalID;
+  this.canvas;
+  this.context;
+  this.execute = randomMatch;
+  this.clear_canvas = clear;
 
   // canvas element and 2D context
-  var canvas = document.createElement('canvas');
-  canvas.width = CANVAS_SIZE;
-  canvas.height = CANVAS_SIZE;
-  document.body.appendChild(canvas);
-  var context = canvas.getContext('2d');
+  that.canvas = document.createElement('canvas');
+  that.canvas.width = that.CANVAS_SIZE;
+  that.canvas.height = that.CANVAS_SIZE;
+  document.body.appendChild(that.canvas);
+  that.context = that.canvas.getContext('2d');
 
-  context.fillStyle="rgb(255,255,255)";
-  context.fillRect(0,0, CANVAS_SIZE, CANVAS_SIZE);
+  that.context.fillStyle="rgb(255,255,255)";
+  that.context.fillRect(0,0, that.CANVAS_SIZE, that.CANVAS_SIZE);
 
-
-  var grid = [];
-  reset_grid()
-  function stop() {
-    worker.terminate()
-  }
   function randomMatch(iters) {
-    idle = false;
+    that.idle = false;
     document.getElementById('result').textContent = "computing";
-    worker.postMessage({'cmd': 'grid', 'grid':grid, 'dim':MAX, 'edge':edge, 'num':iters});
+    worker.postMessage({'cmd': 'grid', 'grid':that.grid, 'dim':that.MAX, 'edge':that.edge, 'num':iters});
   }
 
   var worker = new Worker('js/worker.js');
 
   worker.addEventListener('message', function(e) {
     var res = e.data;
-    edge = res.edge;
-    //console.log(edge, Math.sqrt(res.max_dist));
+    that.edge = res.edge;
+    console.log(that.edge, Math.sqrt(res.max_dist));
     for(var i = 0; i < res.coords.length; i++) {
-      if(i%25===0) { TIME += 1; COLOR = makeColor(TIME);}
+      if(i%25===0) { TIME += 1; that.COLOR = makeColor(TIME);}
       var x = res.coords[i].x;
       var y = res.coords[i].y;
-      grid[x][y] += 1;
-      draw_point(x, y); 
+      that.grid[x][y] += 1;
+      draw_point(that, x, y); 
     }
     document.getElementById('result').textContent = res.iter+" and coords length: "+res.coords.length;
-    if((res.iter != 0) && (edge < HALF_MAX)) {
-      idle = true;
+    if((res.iter != 0) && (that.edge < that.HALF_MAX)) {
+      that.idle = true;
     } else {
-      finish_time = new Date();
-      document.getElementById('time').textContent = "Finished in: "+(finish_time-start_time)/1000.0+" sec";
+      that.finish_time = new Date();
+      document.getElementById('time').textContent = "Finished in: "+(that.finish_time-that.start_time)/1000.0+" sec";
     }
   }, false);
+} 
+ 
+function draw_point(sim,x,y,exception) {
+  if(sim.grid[x][y]==1 || exception) {
+  var c = sim.context;
+  c.fillStyle = sim.COLOR;
+  c.beginPath();
+  c.rect(x*sim.STEP, y*sim.STEP, sim.STEP, sim.STEP)
+  c.closePath();
+  c.fill();
+  }
+}
+function clear_point(x,y) {
+  var c = sim.context;
+  c.fillStyle = '#fff'; 
+  c.beginPath();
+  c.rect(x*sim.STEP, y*sim.STEP, sim.STEP, sim.STEP)
+  c.closePath();
+  c.fill();
+}
 
-  function draw_point(x,y,exception) {
-    if(grid[x][y]==1 || exception) {
-    var c = context;
-    c.fillStyle = COLOR || makeColor(TIME) //: "#555"; //COLORS[COLOR_INDEX]; //this.color(); // "rgba(5, 5, 5, "+this.level/10.0+")"
-    c.beginPath();
-    c.rect(x*STEP, y*STEP, STEP, STEP)
-    c.closePath();
-    c.fill();
-    }
-  }
-  function clear_point(x,y) {
-    var c = context;
-    c.fillStyle = '#fff'; 
-    c.beginPath();
-    c.rect(x*STEP, y*STEP, STEP, STEP)
-    c.closePath();
-    c.fill();
-  }
-  var intervalID;
-function playSim(iters) {
-  start_time = new Date();
-  idle = true;
-  edge = 25;
-  create_nuclei();
-  intervalID = setInterval(function() {
-    if(idle) {
-      randomMatch(iters || 75);
-    }
-  }, 1000/30);
-}
-function pause() {
-  clearInterval(intervalID)
-}
-  
 // Do Awesome Things With Colors!
 function makeColor(index) {
   function color(i) {
@@ -119,38 +113,56 @@ function makeColor(index) {
 
   return "#" + red(index) + green(index) + blue(index);
 }
-function clear() {
-  edge = 25;
-  reset_grid();
-  create_nuclei();
-  context.fillStyle="rgb(255,255,255)";
-  context.fillRect(0,0, CANVAS_SIZE, CANVAS_SIZE);
+function startSimulation(iters, SIZE, pixels_per) {
+  sim = new init(SIZE || 500, pixels_per || 5)
+  sim.start_time = new Date();
+  clear(sim);
+  play(iters, sim);
 }
-function reset_grid() {
-  for(var i=0; i < MAX; i++) {
-    grid[i] = [];
-    for(var j=0; j < MAX; j++) {
-      grid[i][j] = 0;
+function pause(sim) {
+  sim.idle = false;
+  clearInterval(sim.intervalID)
+}
+function play(iters, sim) {
+  sim.idle = true;
+  sim.intervalID = setInterval(function() {
+    if(sim.idle) {
+      sim.execute(iters || 75);
+    }
+  }, 1000/30);
+}
+function clear(sim) {
+  pause(sim);
+  sim.edge = 25;
+  reset_grid(sim);
+  create_nuclei(sim);
+  sim.context.fillStyle="rgb(255,255,255)";
+  sim.context.fillRect(0,0, sim.CANVAS_SIZE, sim.CANVAS_SIZE);
+}
+function reset_grid(sim) {
+  for(var i=0; i < sim.MAX; i++) {
+    sim.grid[i] = [];
+    for(var j=0; j < sim.MAX; j++) {
+      sim.grid[i][j] = 0;
     }  
   }
 }
-function create_nuclei() {
-  for(var i=HALF_MAX-2; i<HALF_MAX+2; i++) {
-    for(var j=HALF_MAX-2; j<HALF_MAX+2; j++) {
-      grid[i][j] = 1;
-      draw_point(i, j);
+function create_nuclei(sim) {
+  for(var i=sim.HALF_MAX-2; i<sim.HALF_MAX+2; i++) {
+    for(var j=sim.HALF_MAX-2; j<sim.HALF_MAX+2; j++) {
+      sim.grid[i][j] = 1;
+      draw_point(sim, i, j);
     }
   }
 }
 function random_from_polar(radius) {
   var angle = Math.random()*2*Math.PI;
-  radius = Math.min(radius, MAX/2);
   var x = Math.floor(radius*Math.cos(angle))+MAX/2
   var y = Math.floor(radius*Math.sin(angle))+MAX/2
   return {'x':x, 'y':y};
 }
 function draw_circle(radius) {
-  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); draw_point(c.x, c.y, true)}
+  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); draw_point(sim, c.x, c.y, true)}
 }
 function clear_circle(radius) {
   for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); clear_point(c.x, c.y)}
