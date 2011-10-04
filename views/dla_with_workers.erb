@@ -1,36 +1,35 @@
 <div id="functions" style="clear:both;">
 <button onclick="startSimulation()">Start or restart</button>
-<button onclick="play()">Play</button></br>
-<button onclick="pause()">Pause</button></br>
-<button onclick="save()">Save</button></br>
+<button onclick="playSim()">Play</button></br>
+<button onclick="pauseSim()">Pause</button></br>
 </div>
 
 <script>
 var simulations = [];  
-var sim;
-var sim_stats = '<div class="result"></div>'+'<div class="time"></div>';
+function sim_stats() {
+  return '<div class="result"></div><div class="time"></div><button class="saveSim" id="sim_'+simulations.length+'">Save</button></br>'
+}
 
-function init(size, pixels_per) {
+function init(radius, pixels_per) {
   var that = this;
 
-  var TIME = 765;
+  var TIME = Math.floor(Math.random()*1530);
   this.COLOR = makeColor(TIME);
-  this.CANVAS_SIZE = size || 1800;
-  this.STEP = pixels_per || 2;
+  this.RADIUS = Math.floor(radius) || 500;
+  this.STEP = Math.floor(pixels_per) || 1;
+  this.CANVAS_SIZE = this.RADIUS*2*this.STEP;
 
-  this.MAX = Math.floor(that.CANVAS_SIZE/this.STEP);
-  this.HALF_MAX = Math.floor(this.MAX/2);
   this.idle = true;
-  this.grid = [];
-  this.edge = 25; //Math.floor(HALF_MAX/2);
+  this.grid;
+  this.edge = 25; 
+  this.sticking_prob = 1.0;
 
-  this.start_time;
+  this.start_time = new Date();
   this.finish_time;
   this.intervalID;
   this.canvas;
   this.context;
   this.execute = randomMatch;
-  this.clear_canvas = clear;
 
   // canvas element and 2D context
 
@@ -40,7 +39,7 @@ function init(size, pixels_per) {
   $(that.canvas).addClass("mycanvas");
   //document.body.appendChild(that.canvas);
   $("#functions").after(that.canvas);
-  $(that.canvas).before(sim_stats);
+  $(that.canvas).before(sim_stats());
   that.context = that.canvas.getContext('2d');
 
   that.context.fillStyle="rgb(255,255,255)";
@@ -49,7 +48,7 @@ function init(size, pixels_per) {
   function randomMatch(iters) {
     that.idle = false;
     $('.result').first().text("computing");
-    worker.postMessage({'cmd': 'grid', 'grid':that.grid, 'dim':that.MAX, 'edge':that.edge, 'num':iters});
+    worker.postMessage({'cmd': 'grid', 'grid':that.grid, 'radius':that.RADIUS, 'edge':that.edge, 'num':iters, 'sticking_prob':that.sticking_prob});
   }
 
   var worker = new Worker('js/worker.js');
@@ -66,15 +65,77 @@ function init(size, pixels_per) {
       draw_point(that, x, y); 
     }
     $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
-    if((res.iter != 0) && (that.edge < that.HALF_MAX)) {
+    if((res.iter != 0) && (that.edge < that.RADIUS)) {
       that.idle = true;
     } else {
       that.finish_time = new Date();
       $(".time").first().text("Finished in: "+(that.finish_time-that.start_time)/1000.0+" sec");
     }
   }, false);
+
+  this.reset_grid();
+  this.create_nuclei();
 } 
- 
+init.prototype.pause = function() {
+  var sim = this;
+  sim.idle = false;
+  clearInterval(sim.intervalID);
+}
+init.prototype.play = function(iters) {
+  var sim = this;
+  sim.idle = true;
+  iters = iters || 75;
+
+  sim.intervalID = setInterval(function() {
+    if(sim.idle) {
+      sim.execute(iters);
+    }
+  }, 1000/30);
+}
+init.prototype.create_nuclei = function() {
+  var sim = this;
+  for(var i=sim.RADIUS-4; i<sim.RADIUS+4; i++) {
+    for(var j=sim.RADIUS-4; j<sim.RADIUS+4; j++) {
+      sim.grid[i][j] = 1;
+      draw_point(sim, i, j);
+    }
+  }
+}
+init.prototype.save = function() {
+  window.open( this.canvas.toDataURL('image/png'), 'mywindow' );
+}
+init.prototype.reset_grid = function() {
+  var sim = this;
+  sim.grid = []
+  for(var i=0; i < sim.RADIUS*2; i++) {
+    sim.grid[i] = [];
+    for(var j=0; j < sim.RADIUS*2; j++) {
+      sim.grid[i][j] = 0;
+    }  
+  }
+}
+init.prototype.clear = function() {
+  var sim = this;
+  sim.pause();
+  sim.edge = 25;
+  sim.reset_grid();
+  sim.create_nuclei(); 
+  sim.context.fillStyle="rgb(255,255,255)";
+  sim.context.fillRect(0,0, sim.CANVAS_SIZE, sim.CANVAS_SIZE);
+}
+
+init.prototype.draw_circle = function(r) {
+  for(var i=0; i<r*8; i++) {c = random_from_polar(r, this.RADIUS); draw_point(this, c.x, c.y, true)}
+}
+init.prototype.grid_occupation = function() {
+  var num = 0
+  for(var i=0; i< this.RADIUS*2; i++) {
+    for(var j=0; j < this.RADIUS*2; j++) {
+      num += this.grid[i][j];
+    }
+  }
+  return num;
+}
 function draw_point(sim,x,y,exception) {
   if(sim.grid[x][y]==1 || exception) {
   var c = sim.context;
@@ -118,62 +179,33 @@ function makeColor(index) {
 
   return "#" + red(index) + green(index) + blue(index);
 }
-function startSimulation(iters, SIZE, pixels_per) {
-  sim = new init(SIZE || 600, pixels_per || 3)
-  sim.start_time = new Date();
-  clear(sim);
-  play(iters, sim);
+function startSimulation(iters, radius, pixels_per) {
+  pauseSim();
+  var sim = new init(radius || 400, pixels_per || 1)
+  sim.play(iters || 75);
+  simulations.push(sim);
 }
-function pause(sim) {
-  sim.idle = false;
-  clearInterval(sim.intervalID)
-}
-function play(iters, sim) {
-  sim.idle = true;
-  sim.intervalID = setInterval(function() {
-    if(sim.idle) {
-      sim.execute(iters || 75);
-    }
-  }, 1000/30);
-}
-function clear(sim) {
-  pause(sim);
-  sim.edge = 25;
-  reset_grid(sim);
-  create_nuclei(sim);
-  sim.context.fillStyle="rgb(255,255,255)";
-  sim.context.fillRect(0,0, sim.CANVAS_SIZE, sim.CANVAS_SIZE);
-}
-function save() {
-  window.open( sim.canvas.toDataURL('image/png'), 'mywindow' );
-}
-
-function reset_grid(sim) {
-  for(var i=0; i < sim.MAX; i++) {
-    sim.grid[i] = [];
-    for(var j=0; j < sim.MAX; j++) {
-      sim.grid[i][j] = 0;
-    }  
+function playSim() {
+  if(simulations.length) {
+    simulations[simulations.length-1].play();
   }
 }
-function create_nuclei(sim) {
-  for(var i=sim.HALF_MAX-2; i<sim.HALF_MAX+2; i++) {
-    for(var j=sim.HALF_MAX-2; j<sim.HALF_MAX+2; j++) {
-      sim.grid[i][j] = 1;
-      draw_point(sim, i, j);
-    }
+function pauseSim() {
+  if(simulations.length) {
+    simulations[simulations.length-1].pause();
   }
 }
-function random_from_polar(radius) {
+$(".saveSim").live("click", function() {
+  var id = $(".saveSim").index(this);
+  simulations[simulations.length-1-id].save();
+});
+function random_from_polar(r, RADIUS) {
   var angle = Math.random()*2*Math.PI;
-  var x = Math.floor(radius*Math.cos(angle))+MAX/2
-  var y = Math.floor(radius*Math.sin(angle))+MAX/2
+  var x = Math.floor(r*Math.cos(angle))+RADIUS;
+  var y = Math.floor(r*Math.sin(angle))+RADIUS;
   return {'x':x, 'y':y};
 }
-function draw_circle(radius) {
-  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); draw_point(sim, c.x, c.y, true)}
-}
 function clear_circle(radius) {
-  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, MAX); clear_point(c.x, c.y)}
+  for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, RADIUS); clear_point(c.x, c.y)}
 }
 </script>
