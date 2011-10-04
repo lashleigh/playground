@@ -90,12 +90,12 @@ init.prototype.play = function(iters) {
     if(sim.idle) {
       sim.execute(iters);
     }
-  }, 1000/30);
+  }, 1000/10);
 }
 init.prototype.create_nuclei = function() {
   var sim = this;
-  for(var i=sim.RADIUS-4; i<sim.RADIUS+4; i++) {
-    for(var j=sim.RADIUS-4; j<sim.RADIUS+4; j++) {
+  for(var i=sim.RADIUS-2; i<sim.RADIUS+2; i++) {
+    for(var j=sim.RADIUS-2; j<sim.RADIUS+2; j++) {
       sim.grid[i][j] = 1;
       draw_point(sim, i, j);
     }
@@ -135,6 +135,25 @@ init.prototype.grid_occupation = function() {
     }
   }
   return num;
+}
+init.prototype.mass_at_radius = function(r) {
+  var sim = this;
+  var num = 0;
+  r = Math.floor(r);
+  for(var i=-r; i<r; i++) {
+    for(var j=-r; j < r; j++) {
+      if(i*i+j*j <= r*r) { 
+        num += sim.grid[i+sim.RADIUS][j+sim.RADIUS];
+      } 
+    }
+  }
+  return num
+}
+init.prototype.dimension = function() {
+  var masses = []
+  for(var i=10; i< this.RADIUS; i+=10) {
+    masses.push(this.mass_at_radius(i));
+  }
 }
 function draw_point(sim,x,y,exception) {
   if(sim.grid[x][y]==1 || exception) {
