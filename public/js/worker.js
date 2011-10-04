@@ -47,12 +47,11 @@ self.addEventListener('message', function(e) {
 }, false);
 
 function too_far_away(x, y, radius, dim) {
-  return false;
-  //x = x-dim/2;
-  //y = y-dim/2;
-  //r_squared = x*x+y*y;
-  //theta = Math.atan(x,y);
-  //return r_squared > radius*radius + 1024; //false; //(r-radius)*(r-radius) > 2500;
+  x = x-dim/2;
+  y = y-dim/2;
+  r_squared = x*x+y*y;
+  theta = Math.atan(x,y);
+  return r_squared > radius*radius + 20000; //false; //(r-radius)*(r-radius) > 2500;
 }
 function random_from_polar(radius, dim) {
   var angle = Math.random()*2*Math.PI;
