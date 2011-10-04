@@ -14,9 +14,7 @@ self.addEventListener('message', function(e) {
       var coords = [];
       var edge = data.edge;
       for(var i=0; i < data.num; i++) {
-        var left = left_edge(data.dim, edge);
-        var right = right_edge(data.dim, edge);
-        var c = random_coords(left, right);
+        var c = random_from_polar(edge, data.dim);
         var x = c.x; var y = c.y;
         while(coord_has_neighbor(grid, x, y)==0) {
           var p = Math.floor(Math.random()*4)
@@ -27,13 +25,13 @@ self.addEventListener('message', function(e) {
             case 3: y = y-1; break;
           }
           if(!valid_coords(grid,x,y)) {
-            c = random_coords(left, right);
+            c = random_from_polar(edge, data.dim);
             x = c.x;
             y = c.y;
           }
           iter+=1;
         }
-        if((x-left <10)||(right-x <10)||(y-left <10)||(right-y <10)) {
+        if(edge*edge - x*x+y*y < 10) {
           edge += 10;
         }
         grid[x][y] += 1;
@@ -45,6 +43,13 @@ self.addEventListener('message', function(e) {
   };
 }, false);
 
+function random_from_polar(radius, dim) {
+  var angle = Math.random()*2*Math.PI;
+  radius = Math.min(radius, dim/2);
+  var x = Math.floor(radius*Math.cos(angle))+dim/2
+  var y = Math.floor(radius*Math.sin(angle))+dim/2
+  return {'x':x, 'y':y};
+}
 function valid_coords(grid, x, y) {
   return grid[x] && grid[x][y] !== undefined;
 }

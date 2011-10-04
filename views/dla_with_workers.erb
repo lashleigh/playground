@@ -75,6 +75,7 @@
 function playSim(iters) {
   start_time = new Date();
   idle = true;
+  edge = 25;
   create_nuclei();
   intervalID = setInterval(function() {
     if(idle) {
@@ -131,6 +132,7 @@ function makeColor(index) {
   return "#" + red(index) + green(index) + blue(index);
 }
 function clear() {
+  edge = 25;
   reset_grid();
   create_nuclei();
   context.fillStyle="rgb(255,255,255)";
