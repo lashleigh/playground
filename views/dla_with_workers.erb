@@ -46,10 +46,10 @@
   function stop() {
     worker.terminate()
   }
-  function randomMatch() {
+  function randomMatch(iters) {
     idle = false;
     document.getElementById('result').textContent = "computing";
-    worker.postMessage({'cmd': 'grid', 'grid':grid, 'dim':MAX, 'edge':edge});
+    worker.postMessage({'cmd': 'grid', 'grid':grid, 'dim':MAX, 'edge':edge, 'num':iters});
   }
 
   var worker = new Worker('js/worker.js');
@@ -80,10 +80,10 @@
     grid[x][y] += 1;
   }
   var intervalID;
-  function playSim() {
+  function playSim(iters) {
     intervalID = setInterval(function() {
       if(idle) {
-        randomMatch();
+        randomMatch(iters);
       }
     }, 1000/30);
   }

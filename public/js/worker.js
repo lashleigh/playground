@@ -13,7 +13,7 @@ self.addEventListener('message', function(e) {
       var iter = 0;
       var coords = [];
       var edge = data.edge;
-      for(var i=0; i < 20; i++) {
+      for(var i=0; i < data.num; i++) {
         var left = left_edge(data.dim, edge);
         var right = right_edge(data.dim, edge);
         var c = random_coords(left, right);
