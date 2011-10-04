@@ -41,9 +41,10 @@
   worker.addEventListener('message', function(e) {
     var res = e.data;
     edge = res.edge;
-    TIME += 15;
-    COLOR = makeColor(TIME);
+    //TIME += 15;
+    //COLOR = makeColor(TIME);
     for(var i = 0; i < res.coords.length; i++) {
+      if(i%10===0) { TIME += 2; COLOR = makeColor(TIME);}
       draw_point(res.coords[i].x, res.coords[i].y); //grid[res.x][res.y] += 1;
     }
     document.getElementById('result').textContent = res.iter+" and coords length: "+res.coords.length;
@@ -101,7 +102,7 @@ function right_edge() {
 function makeColor(index) {
   function color(i) {
     // Wrap around using modulus 
-    i = i % 1530;
+    i = Math.floor(i) % 1530;
 
     // Calculate the value
     var v;
