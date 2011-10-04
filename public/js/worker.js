@@ -22,8 +22,8 @@ self.addEventListener('message', function(e) {
           var p = Math.floor(Math.random()*4)
           switch(p) {
             case 0: x = x+1; break;
-            case 1: y = y+1; break;
-            case 2: x = x-1; break;
+            case 1: x = x-1; break;
+            case 2: y = y+1; break;
             case 3: y = y-1; break;
           }
           if(!valid_coords(grid,x,y)) {
@@ -33,8 +33,8 @@ self.addEventListener('message', function(e) {
           }
           iter+=1;
         }
-        if((right-x < 10) || (x-left < 10) || (right-y < 10) || (y-left < 10)) {
-          edge += 10
+        if((x-left <10)||(right-x <10)||(y-left <10)||(right-y <10)) {
+          edge += 10;
         }
         grid[x][y] += 1;
         coords.push({'x':x, 'y':y});
@@ -61,20 +61,20 @@ function coord_has_neighbor(grid, x, y) {
   }
   return num;
 }
-function left_edge(edge, dim) {
+function left_edge(dim, edge) {
   return Math.max(dim/2-edge, 0);
 }
-function right_edge(edge, dim) {
+function right_edge(dim, edge) {
   return Math.min(dim/2+edge, dim-1);
 }
 function random_coords(left, right) {
   var x, y;
-  if(Math.random() > 0.5) {
-    x = Math.random() > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
-    y = Math.floor(Math.random()*(right-left))+left; // > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
-  } else {
-    y = Math.random() > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
-    x = Math.floor(Math.random()*(right-left))+left; // > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
+  var p = Math.floor(Math.random()*4);
+  switch(p) {
+    case 0: x=left;  y= Math.floor(Math.random()*(right-left))+left; break;
+    case 1: x=right; y= Math.floor(Math.random()*(right-left))+left; break;
+    case 2: y=left;  x= Math.floor(Math.random()*(right-left))+left; break;
+    case 3: y=right; x= Math.floor(Math.random()*(right-left))+left; break;
   }
   return {'x':x,'y':y};
 }

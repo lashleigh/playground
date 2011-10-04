@@ -61,14 +61,13 @@
   worker.addEventListener('message', function(e) {
     var res = e.data;
     edge = res.edge;
-    console.log(edge);
     TIME+=1;
     COLOR_INDEX = (COLOR_INDEX+1) % COLORS.length
     for(var i = 0; i < res.coords.length; i++) {
       draw_point(res.coords[i].x, res.coords[i].y); //grid[res.x][res.y] += 1;
     }
     document.getElementById('result').textContent = res.iter+" and coords length: "+res.coords.length;
-    if(res.iter != 0) {
+    if((res.iter != 0) && (edge <= HALF_MAX)) {
       idle = true;
     }
   }, false);
@@ -96,15 +95,25 @@
   clearInterval(intervalID)
   }
   
-function random_coords(left, right) {
+function random_coords(l, r) {
+  var left = l !==undefined ? l : left_edge();
+  var right = r || right_edge();
   var x, y;
-  if(Math.random() > 0.5) {
-    x = Math.random() > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
-    y = Math.floor(Math.random()*(right-left))+left; // > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
-  } else {
-    y = Math.random() > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
-    x = Math.floor(Math.random()*(right-left))+left; // > 0.5 ? left : right; //Math.floor(Math.random()*data.dim);
+  var p = Math.floor(Math.random()*4);
+  switch(p) {
+    case 0: x=left;  y= Math.floor(Math.random()*(right-left))+left; break;
+    case 1: x=right; y= Math.floor(Math.random()*(right-left))+left; break;
+    case 2: y=left;  x= Math.floor(Math.random()*(right-left))+left; break;
+    case 3: y=right; x= Math.floor(Math.random()*(right-left))+left; break;
   }
-  return {'x':x,'y':y};
+  //return {'x':x,'y':y};
+  return [x,y];
 }
+function left_edge() {
+  return Math.max(MAX/2-edge, 0);
+}
+function right_edge() {
+  return Math.min(HALF_MAX+edge, MAX-1);
+}
+
 </script>
