@@ -5,16 +5,12 @@
 </div>
 
 <script>
-  var CANVAS_SIZE = 500;
+  var CANVAS_SIZE = 800;
   var STEP = 2;
   var MAX = Math.floor(CANVAS_SIZE/STEP);
   var HALF_MAX = Math.floor(MAX/2);
-  var TIME = 0;
-  var COLORS = ['#F00', '#F40', '#F80', '#FC0', '#FF0', 
-                '#8F0', '#4F0', '#0F0', '#0F4', '#0F8', 
-                '#0FF', '#0CF', '#08F', '#04F', '#00F', 
-                '#80F', '#C0F', '#F0F', '#F0C', '#F08']; 
-  var COLOR_INDEX = 0;
+  var TIME = 1020;
+  var COLOR;
   var edge = 25; //Math.floor(HALF_MAX/2);
   var idle = true;
 
@@ -61,8 +57,8 @@
   worker.addEventListener('message', function(e) {
     var res = e.data;
     edge = res.edge;
-    TIME+=1;
-    COLOR_INDEX = (COLOR_INDEX+1) % COLORS.length
+    TIME += 3;
+    COLOR = makeColor(TIME);
     for(var i = 0; i < res.coords.length; i++) {
       draw_point(res.coords[i].x, res.coords[i].y); //grid[res.x][res.y] += 1;
     }
@@ -75,7 +71,7 @@
   function draw_point(x,y) {
     if(grid[x][y]==0) {
     var c = context;
-    c.fillStyle = "#555"; //COLORS[COLOR_INDEX]; //this.color(); // "rgba(5, 5, 5, "+this.level/10.0+")"
+    c.fillStyle = COLOR || makeColor(TIME) //: "#555"; //COLORS[COLOR_INDEX]; //this.color(); // "rgba(5, 5, 5, "+this.level/10.0+")"
     c.beginPath();
     c.rect(x*STEP, y*STEP, STEP, STEP)
     c.closePath();
@@ -89,7 +85,7 @@
       if(idle) {
         randomMatch();
       }
-    }, 1000/3);
+    }, 1000/30);
   }
   function pause() {
   clearInterval(intervalID)
@@ -115,5 +111,28 @@ function left_edge() {
 function right_edge() {
   return Math.min(HALF_MAX+edge, MAX-1);
 }
+// Do Awesome Things With Colors!
+function makeColor(index) {
+  function color(i) {
+    // Wrap around using modulus 
+    i = i % 1530;
 
+    // Calculate the value
+    var v;
+    if(i < 255)       v = i;
+    else if(i < 765)  v = 255;
+    else if(i < 1020) v = 255 - (i - 765);
+    else              v = 0;
+
+    // Make it a zero-padded value
+    v = v.toString(16);
+    if(v.length == 1) return "0" + v;
+    else              return v;
+  }
+  function red(i)   { return color(i + 510); }
+  function green(i) { return color(i);        }
+  function blue(i)  { return color(i + 1020);  }
+
+  return "#" + red(index) + green(index) + blue(index);
+}
 </script>
