@@ -32,8 +32,8 @@ self.addEventListener('message', function(e) {
           }
           iter+=1;
         }
-        var dist = Math.sqrt((x-data.dim/2)*(x-data.dim/2)+(y-data.dim/2)*(y-data.dim/2));
-        if((edge-dist)*(edge-dist) <= 100) {
+        var dist = (x-data.dim/2)*(x-data.dim/2)+(y-data.dim/2)*(y-data.dim/2);
+        if(edge*edge - dist <= 100) { //(edge-dist)*(edge-dist) <= 100) {
           edge += 10;
         }
         if(dist > max_dist) {max_dist = dist};
@@ -47,10 +47,12 @@ self.addEventListener('message', function(e) {
 }, false);
 
 function too_far_away(x, y, radius, dim) {
-  x = x-dim/2;
-  y = y-dim/2;
-  r = Math.sqrt(x*x+y*y);
-  return false; //(r-radius)*(r-radius) > 2500;
+  return false;
+  //x = x-dim/2;
+  //y = y-dim/2;
+  //r_squared = x*x+y*y;
+  //theta = Math.atan(x,y);
+  //return r_squared > radius*radius + 1024; //false; //(r-radius)*(r-radius) > 2500;
 }
 function random_from_polar(radius, dim) {
   var angle = Math.random()*2*Math.PI;
