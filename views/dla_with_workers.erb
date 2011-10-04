@@ -65,6 +65,7 @@
   }
   var intervalID;
 function playSim(iters) {
+  idle = true;
   create_nuclei();
   intervalID = setInterval(function() {
     if(idle) {
