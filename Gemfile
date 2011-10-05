@@ -2,5 +2,7 @@ source :rubygems
 gem 'sinatra'
 gem 'shotgun'
 gem 'less'
-gem 'coffee-script'
-gem 'therubyracer'
+
+gem 'bson_ext'
+gem 'mongo'
+gem 'tux'

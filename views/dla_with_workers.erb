@@ -9,20 +9,23 @@ var simulations = [];
 function sim_stats() {
   return '<div class="result"></div><div class="time"></div><button class="saveSim" id="sim_'+simulations.length+'">Save</button></br>'
 }
+var HALF_ROOT_THREE = Math.sqrt(3)/2
 
-function init(radius, pixels_per) {
+function init(options) {
   var that = this;
 
   var TIME = Math.floor(Math.random()*1530);
   this.COLOR = makeColor(TIME);
-  this.RADIUS = Math.floor(radius) || 500;
-  this.STEP = Math.floor(pixels_per) || 1;
-  this.CANVAS_SIZE = this.RADIUS*2*this.STEP;
+  this.RADIUS = options['radius'] ? Math.floor(options['radius']) : 200;
+  this.STEP = options['ppp'] ? Math.floor(options['ppp']) : 4;
+  this.CANVAS_WIDTH = this.RADIUS*2*this.STEP;
+  this.CANVAS_HEIGHT = this.CANVAS_WIDTH*1/HALF_ROOT_THREE;
+  this.GRID_STYLE = options['grid'] || 'hex';
 
   this.idle = true;
   this.grid;
   this.edge = 25; 
-  this.sticking_prob = 1.0;
+  this.sticking_prob = options['sticking_prob'] || 1.0;
 
   this.start_time = new Date();
   this.finish_time;
@@ -34,8 +37,8 @@ function init(radius, pixels_per) {
   // canvas element and 2D context
 
   that.canvas = document.createElement('canvas');
-  that.canvas.width = that.CANVAS_SIZE;
-  that.canvas.height = that.CANVAS_SIZE;
+  that.canvas.width = that.CANVAS_WIDTH;
+  that.canvas.height = that.CANVAS_HEIGHT;
   $(that.canvas).addClass("mycanvas");
   //document.body.appendChild(that.canvas);
   $("#functions").after(that.canvas);
@@ -43,12 +46,12 @@ function init(radius, pixels_per) {
   that.context = that.canvas.getContext('2d');
 
   that.context.fillStyle="rgb(255,255,255)";
-  that.context.fillRect(0,0, that.CANVAS_SIZE, that.CANVAS_SIZE);
+  that.context.fillRect(0,0, that.CANVAS_WIDTH, that.CANVAS_HEIGHT);
 
   function randomMatch(iters) {
     that.idle = false;
     $('.result').first().text("computing");
-    worker.postMessage({'cmd': 'grid', 'grid':that.grid, 'radius':that.RADIUS, 'edge':that.edge, 'num':iters, 'sticking_prob':that.sticking_prob});
+    worker.postMessage({'cmd': 'grid', 'grid':that.grid, 'radius':that.RADIUS, 'edge':that.edge, 'num':iters, 'sticking_prob':that.sticking_prob, 'grid_style':that.GRID_STYLE});
   }
 
   var worker = new Worker('js/worker.js');
@@ -92,6 +95,9 @@ init.prototype.play = function(iters) {
     }
   }, 1000/10);
 }
+init.prototype.one_step = function(iters) {
+  this.execute(iters);
+}
 init.prototype.create_nuclei = function() {
   var sim = this;
   for(var i=sim.RADIUS-2; i<sim.RADIUS+2; i++) {
@@ -121,7 +127,7 @@ init.prototype.clear = function() {
   sim.reset_grid();
   sim.create_nuclei(); 
   sim.context.fillStyle="rgb(255,255,255)";
-  sim.context.fillRect(0,0, sim.CANVAS_SIZE, sim.CANVAS_SIZE);
+  sim.context.fillRect(0,0, sim.CANVAS_WIDTH, sim.CANVAS_HEIGHT);
 }
 
 init.prototype.draw_circle = function(r) {
@@ -151,18 +157,56 @@ init.prototype.mass_at_radius = function(r) {
 }
 init.prototype.dimension = function() {
   var masses = []
-  for(var i=10; i< this.RADIUS; i+=10) {
-    masses.push(this.mass_at_radius(i));
+  for(var i=1; i< this.RADIUS/2; i++) {
+    var m = this.mass_at_radius(i);
+    console.log(i+" "+m);
+    masses.push(m);
   }
+  return masses;
 }
-function draw_point(sim,x,y,exception) {
-  if(sim.grid[x][y]==1 || exception) {
+function make_hex(sim, x, y, rad) {
+  var r = rad || sim.STEP/1.5;
+  var h=HALF_ROOT_THREE*r;
   var c = sim.context;
+  if(x%2==1) {
+    var x = (x+x/2)*r+r;
+    var y = y*2*h+2*h;
+  } else {
+    var x = (x/2)*3*r+r;
+    var y = (2*y-1)*h+2*h;
+  }
   c.fillStyle = sim.COLOR;
   c.beginPath();
-  c.rect(x*sim.STEP, y*sim.STEP, sim.STEP, sim.STEP)
+  c.moveTo(x-r/2, y+h);
+  c.lineTo(x+r/2, y+h);
+  c.lineTo(x+r,   y+0);
+  c.lineTo(x+r/2, y-h);
+  c.lineTo(x-r/2, y-h);
+  c.lineTo(x-r,   y+0);
+  c.lineTo(x-r/2, y+h);
+  
   c.closePath();
   c.fill();
+
+  if(rad) {
+    c.fillStyle = "#fff";
+    c.font      = 'italic 14px sans-serif';
+    c.fillText(Math.floor(y)+" "+Math.floor(x), x-r/2, y);
+  }
+}
+
+function draw_point(sim,x,y,exception) {
+  if(sim.grid[x][y]==1 || exception) {
+    if(sim.GRID_STYLE === 'hex') {
+      make_hex(sim, x, y);
+    } else {
+      var c = sim.context;
+      c.fillStyle = sim.COLOR;
+      c.beginPath();
+      c.rect(x*sim.STEP, y*sim.STEP, sim.STEP, sim.STEP)
+      c.closePath();
+      c.fill();
+    }
   }
 }
 function clear_point(x,y) {
@@ -176,9 +220,10 @@ function clear_point(x,y) {
 
 // Do Awesome Things With Colors!
 function makeColor(index) {
+  index = index || Math.floor(Math.random()*1530);
   function color(i) {
     // Wrap around using modulus 
-    i = Math.floor(i) % 1530;
+    i = i % 1530;
 
     // Calculate the value
     var v;
@@ -198,11 +243,13 @@ function makeColor(index) {
 
   return "#" + red(index) + green(index) + blue(index);
 }
-function startSimulation(iters, radius, pixels_per) {
+function startSimulation(options) {
+  options = options || {};
   pauseSim();
-  var sim = new init(radius || 400, pixels_per || 1)
-  sim.play(iters || 75);
+  var sim = new init(options)
+  //sim.play(options['iters'] || 75);
   simulations.push(sim);
+  return sim;
 }
 function playSim() {
   if(simulations.length) {
@@ -226,5 +273,71 @@ function random_from_polar(r, RADIUS) {
 }
 function clear_circle(radius) {
   for(var i=0; i<radius*8; i++) {c = random_from_polar(radius, RADIUS); clear_point(c.x, c.y)}
+}
+var options = function () {
+  console.log("Use the command startSimulation(options). Where options are of the form: ");
+  console.log("{'radius':350, 'sticking_prob':0.1, 'iters':75, 'ppp':4}");
+  console.log("\n");
+  console.log("The available parameters and their (defaults) and [range]");
+  console.log("radius           (400) [4..]: half the width of the grid. I have not tested a radius larger that 800");
+  console.log("sticking_prob    (1.0) [0.01..1]: The probability that a particle will stick.");
+  console.log("iters (75) [5..]: The number of particles that get created on the web worker at each call. I have not tested a value larger than 10000");
+  console.log("ppp                (1) [1..10]: The number of pixels for one particle width, pixels per particle. This just makes the image larger.");
+  console.log("grid               ('classic') ['classic', 'classic8', 'hex', 'nogrid']: The style of discretization. This impacts the number of available neighbors");
+}
+function coord_has_neighbor(sim, x,y) {
+  var num=0;
+  //num+= occupied(x,y)   ? 1: 0;
+  num+= occupied(x-1,y) ? 1: 0;
+  num+= occupied(x+1,y) ? 1: 0;
+  num+= occupied(x,y-1) ? 1: 0;
+  num+= occupied(x,y+1) ? 1: 0;
+  if(sim.GRID_STYLE=="hex") {
+    num+= occupied(x-1,y+1) ? 1: 0;
+    num+= occupied(x+1,y+1) ? 1: 0;
+  }
+  if(sim.GRID_STYLE=="classic8") {
+    num+= occupied(x+1,y-1) ? 1: 0;
+    num+= occupied(x+1,y+1) ? 1: 0;
+    num+= occupied(x-1,y-1) ? 1: 0;
+    num+= occupied(x-1,y+1) ? 1: 0;
+  }
+
+  function occupied(x,y) {
+    return sim.grid[x] && sim.grid[x][y];
+  }
+  //TODO This a hack, basically saying the more neighbors you have the more likely
+  //you are to stay stuck.
+  if(sim.sticking_prob < 1.0) {
+    if(Math.random() < data.sticking_prob*num) {
+      return num;
+    } else {
+      return 0;
+    }
+  } else {
+    return num;
+  }
+}
+function get_neighbors_of(sim, x, y) {
+  var neigh = []
+  var grid = sim.grid;
+  neigh.push(neigh_hash(x-1, y))
+  neigh.push(neigh_hash(x+1, y))
+  neigh.push(neigh_hash(x, y-1))
+  neigh.push(neigh_hash(x, y+1))
+  if(sim.GRID_STYLE=="hex") {
+    neigh.push(neigh_hash(x-1, y+1))
+    neigh.push(neigh_hash(x+1, y+1))
+  }
+  else if(sim.GRID_STYLE=="classic8") {
+    neigh.push([x+1,y-1,grid[x+1][y-1]])
+    neigh.push([x+1,y+1,grid[x+1][y+1]])
+    neigh.push([x-1,y-1,grid[x-1][y-1]])
+    neigh.push([x-1,y+1,grid[x-1][y+1]])
+  }
+  function neigh_hash(x, y) {
+    return {'x':x, 'y':y, 'z':grid[x][y]}
+  }
+  return neigh;
 }
 </script>

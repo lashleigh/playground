@@ -4,7 +4,7 @@ require 'bundler/setup'
 require 'sinatra'
 require 'erb'
 require 'less'
-require 'coffee-script'
+require 'mongo'
 
 require './hi'
 run Sinatra::Application
