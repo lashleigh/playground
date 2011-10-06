@@ -6,7 +6,7 @@ self.addEventListener('message', function(e) {
     var coords = [];
     var edge = data.edge;
     var max_dist = 0;
-    var walk_function = classic8_walk; //function() { if(data.grid_style==='hex') { return hex_walk;} else if(data.grid_style==="classic8") { return classic8_walk;} else { return classic_walk;};}
+    var walk_function = hex_walk; //function() { if(data.grid_style==='hex') { return hex_walk;} else if(data.grid_style==="classic8") { return classic8_walk;} else { return classic_walk;};}
     for(var i=0; i < data.num; i++) {
       var c = random_classic(edge, data.radius);
       while(coord_has_neighbor(grid, c, data)==0) {
@@ -52,6 +52,15 @@ function coord_has_neighbor(grid, c, data) {
   num+= occupied(x+1,y) ? 1: 0;
   num+= occupied(x,y-1) ? 1: 0;
   num+= occupied(x,y+1) ? 1: 0;
+  if(data.grid_style=="hex") {
+    if(x%2==0) {
+      num+= occupied(x+1, y-1)
+      num+= occupied(x-1, y-1)
+    } else {
+      num+= occupied(x-1, y+1)
+      num+= occupied(x+1, y+1)
+    }
+  }
   else if(data.grid_style=="classic8") {
     num+= occupied(x+1,y-1) ? 1: 0;
     num+= occupied(x+1,y+1) ? 1: 0;
@@ -119,17 +128,17 @@ function random_hex(drop_r, max_r) {
   //return {'x':res[0], 'y':res[1], 'z':res[2]};
 }
 function hex_walk(c) {
+  var x=c.x, y=c.y;
   var p = Math.floor(Math.random()*6)
-  var i=c.i, j=c.j, k=c.k;
   switch(p) {
-    case 0: j+=  1; k+= -1; break; //[ 0, 1,-1]
-    case 1: j+= -1; k+=  1; break; //[ 0,-1, 1]
-    case 2: i+=  1; k+= -1; break; //[ 1, 0,-1]
-    case 3: i+= -1; k+=  1; break; //[-1, 0, 1] 
-    case 4: i+=  1; j+= -1; break; //[ 1,-1, 0]
-    case 5: i+= -1; j+=  1; break; //[-1, 1, 0]
+    case 0: x = x+1; break;
+    case 1: x = x-1; break;
+    case 2: y = y+1; break;
+    case 3: y = y-1; break;
+    case 4: if(x%2==0) {x = x+1; y = y-1; } else {x = x-1; y = y+1;} break;
+    case 5: if(x%2==0) {x = x-1; y = y-1; } else {x = x+1; y = y+1;} break;
   }
-  return {'i':i, 'j':j, 'k':k};
+  return {'x':x, 'y':y};
 }
 // Ordered counter clockwise from
 // http://stackoverflow.com/questions/2049196/generating-triangular-hexagonal-coordinates-xyz
@@ -163,9 +172,9 @@ function all_neighbors_hex(v) {
   }
   return neigh;
 }
-function random_corner(r) {
+function random_corner(r, v) {
   var n = Math.floor(Math.random()*6); 
-  var c = multiply(hex_identity[n], r); 
+  var c = sum_array(multiply(hex_identity[n], r), v); 
 
   var p = Math.floor(Math.random()*2*(r-1)) - (r-1);
   console.log({'p':p, 'n':n, 'c':c})

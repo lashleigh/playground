@@ -285,39 +285,7 @@ var options = function () {
   console.log("ppp                (1) [1..10]: The number of pixels for one particle width, pixels per particle. This just makes the image larger.");
   console.log("grid               ('classic') ['classic', 'classic8', 'hex', 'nogrid']: The style of discretization. This impacts the number of available neighbors");
 }
-function coord_has_neighbor(sim, x,y) {
-  var num=0;
-  //num+= occupied(x,y)   ? 1: 0;
-  num+= occupied(x-1,y) ? 1: 0;
-  num+= occupied(x+1,y) ? 1: 0;
-  num+= occupied(x,y-1) ? 1: 0;
-  num+= occupied(x,y+1) ? 1: 0;
-  if(sim.GRID_STYLE=="hex") {
-    num+= occupied(x-1,y+1) ? 1: 0;
-    num+= occupied(x+1,y+1) ? 1: 0;
-  }
-  if(sim.GRID_STYLE=="classic8") {
-    num+= occupied(x+1,y-1) ? 1: 0;
-    num+= occupied(x+1,y+1) ? 1: 0;
-    num+= occupied(x-1,y-1) ? 1: 0;
-    num+= occupied(x-1,y+1) ? 1: 0;
-  }
 
-  function occupied(x,y) {
-    return sim.grid[x] && sim.grid[x][y];
-  }
-  //TODO This a hack, basically saying the more neighbors you have the more likely
-  //you are to stay stuck.
-  if(sim.sticking_prob < 1.0) {
-    if(Math.random() < data.sticking_prob*num) {
-      return num;
-    } else {
-      return 0;
-    }
-  } else {
-    return num;
-  }
-}
 function neighbors_classic(sim, x, y) {
   var neigh = []
   var grid = sim.grid;
@@ -335,8 +303,5 @@ function neighbors_classic(sim, x, y) {
     return {'x':x, 'y':y, 'z':grid[x][y]}
   }
   return neigh;
-}
-function neighbors_hex(sim, i, j, k) {
-
 }
 </script>
