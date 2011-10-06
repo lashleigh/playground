@@ -27,7 +27,7 @@ self.addEventListener('message', function(e) {
         iter+=1;
       }
       var dist = Math.floor((c.x-data.radius)*(c.x-data.radius)+(c.y-data.radius)*(c.y-data.radius));
-      if(dist > max_dist) {max_dist = dist; edge = Math.sqrt(dist)+25; }
+      if(dist > max_dist) {max_dist = dist; edge = Math.sqrt(dist)+15; }
       grid[c.x][c.y] += 1;
       coords.push(c);
     }
@@ -92,7 +92,7 @@ function has_neighbor_8(grid, c, data) {
 function neighbors(grid, c, data, neigh_func) {
   var num = neigh_func(grid, c, data);
   if(data.sticking_prob) { 
-    if(Math.random() < data.sticking_prob*num) {
+    if(Math.random() <= data.sticking_prob*num) {
       return num;
     } else {
       return 0;

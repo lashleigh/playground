@@ -18,9 +18,9 @@ function init(options) {
   this.COLOR = makeColor(TIME);
   this.RADIUS = options['radius'] ? Math.floor(options['radius']) : 200;
   this.STEP = options['ppp'] ? Math.floor(options['ppp']) : 3;
-  this.CANVAS_WIDTH = this.RADIUS*2*this.STEP;
-  this.CANVAS_HEIGHT = options['grid']=='hex' ? this.CANVAS_WIDTH*1/HALF_ROOT_THREE : this.CANVAS_WIDTH;
   this.GRID_STYLE = options['grid'] || 'hex';
+  this.CANVAS_WIDTH = this.RADIUS*2*this.STEP;
+  this.CANVAS_HEIGHT = this.GRID_STYLE=='hex' ? this.CANVAS_WIDTH*1/HALF_ROOT_THREE : this.CANVAS_WIDTH;
 
   this.idle = true;
   this.grid;
@@ -66,6 +66,7 @@ function init(options) {
       var y = res.coords[i].y;
       that.grid[x][y] += 1;
       draw_point(that, x, y); 
+      if(that.grid[x][y] > 1) {console.log(x, y)};
     }
     $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
     if((res.iter != 0) && (res.max_dist < that.RADIUS*that.RADIUS)) {
@@ -110,7 +111,7 @@ init.prototype.finish = function() {
   c.fillText('sticking prob: '+this.sticking_prob, 10, fontsize*count);count++;
   //c.fillText('ppp: '+this.STEP,                    10, fontsize*count);count++;
   //c.fillText('final edge: '+(this.edge).toFixed(2),10, fontsize*count);count++;
-  //var occupation = this.grid_occupation()
+  var occupation = this.grid_occupation()
   c.fillText('particles: '+occupation.total,10, fontsize*count);count++;
   c.fillText('sites: '+occupation.num,10, fontsize*count);count++;
 }
@@ -167,16 +168,22 @@ init.prototype.draw_circle = function(r) {
   for(var i=0; i<r*8; i++) {c = random_from_polar(r, this.RADIUS); draw_point(this, c.x, c.y, true)}
 }
 init.prototype.grid_occupation = function() {
-  var num = 0;
-  var total = 0;
+  var numbers = [];
+  var totals = []
   for(var i=0; i< this.RADIUS*2; i++) {
     for(var j=0; j < this.RADIUS*2; j++) {
       var r = this.grid[i][j];
-      total += r;
-      if(r>0) {num++};
+      if(r) {
+        totals[r] = totals[r] || 0;
+        totals[r] += r;
+        numbers[r] = numbers[r] || 0;
+        numbers[r]+=1;
+      }
     }
   }
-  return {'total':total, 'num':num};
+  var tot =_.reduce(totals, function(memo, num){ return memo + num; }, 0);
+  var num =_.reduce(numbers, function(memo, num){ return memo + num; }, 0);
+  return {'total':tot, 'num':num, 'totals':totals, 'numbers':numbers};
 }
 init.prototype.mass_at_radius = function(r) {
   var sim = this;
