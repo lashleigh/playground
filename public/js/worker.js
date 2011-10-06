@@ -26,7 +26,7 @@ self.addEventListener('message', function(e) {
         }
         iter+=1;
       }
-      var dist = (c.x-data.radius)*(c.x-data.radius)+(c.y-data.radius)*(c.y-data.radius);
+      var dist = Math.floor((c.x-data.radius)*(c.x-data.radius)+(c.y-data.radius)*(c.y-data.radius));
       if(dist > max_dist) {max_dist = dist; edge = Math.sqrt(dist)+25; }
       grid[c.x][c.y] += 1;
       coords.push(c);
@@ -35,12 +35,12 @@ self.addEventListener('message', function(e) {
   };
 }, false);
 
-function too_far_away(c, radius, radius, delete_far) {
+function too_far_away(c, edge, radius, delete_far) {
   if(delete_far) {
     var x = c.x-radius;
     var y = c.y-radius;
     r_squared = x*x+y*y;
-    return r_squared > radius*radius + 10000; 
+    return r_squared > edge*edge + 10000; 
   } else {
     return false;
   }

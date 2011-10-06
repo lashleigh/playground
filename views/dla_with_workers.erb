@@ -17,7 +17,7 @@ function init(options) {
   var TIME = Math.floor(Math.random()*1530);
   this.COLOR = makeColor(TIME);
   this.RADIUS = options['radius'] ? Math.floor(options['radius']) : 200;
-  this.STEP = options['ppp'] ? Math.floor(options['ppp']) : 4;
+  this.STEP = options['ppp'] ? Math.floor(options['ppp']) : 3;
   this.CANVAS_WIDTH = this.RADIUS*2*this.STEP;
   this.CANVAS_HEIGHT = this.CANVAS_WIDTH*1/HALF_ROOT_THREE;
   this.GRID_STYLE = options['grid'] || 'hex';
@@ -59,7 +59,7 @@ function init(options) {
   worker.addEventListener('message', function(e) {
     var res = e.data;
     that.edge = res.edge;
-    //console.log(that.edge, Math.sqrt(res.max_dist));
+    //console.log(that.edge, res.max_dist, Math.sqrt(res.max_dist));
     for(var i = 0; i < res.coords.length; i++) {
       if(i%25===0) { TIME += 1; that.COLOR = makeColor(TIME);}
       var x = res.coords[i].x;
@@ -68,11 +68,10 @@ function init(options) {
       draw_point(that, x, y); 
     }
     $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
-    if((res.iter != 0) && (that.edge < that.RADIUS)) {
+    if((res.iter != 0) && (res.max_dist < that.RADIUS*that.RADIUS)) {
       that.idle = true;
     } else {
-      that.finish_time = new Date();
-      $(".time").first().text("Finished in: "+(that.finish_time-that.start_time)/1000.0+" sec");
+      that.finish();
     }
   }, false);
 
@@ -95,17 +94,48 @@ init.prototype.play = function(iters) {
     }
   }, 1000/10);
 }
+init.prototype.finish = function() {
+  this.finish_time = new Date();
+  var duration = (this.finish_time-this.start_time)/1000.0
+  $(".time").first().text("Finished in: "+duration+" sec");
+  var c= this.context; 
+  var fontsize = 20;
+  var count = 1;
+  c.fillStyle = '#000';
+  c.font      = 'italic '+fontsize+'px sans-serif';
+  fontsize +=4;
+  c.fillText('duration (sec): '+(duration).toFixed(2),10, fontsize*count);count++;
+  c.fillText('radius: '+this.RADIUS,               10, fontsize*count);count++;
+  c.fillText('grid style: '+this.GRID_STYLE,       10, fontsize*count);count++;
+  c.fillText('sticking prob: '+this.sticking_prob, 10, fontsize*count);count++;
+  c.fillText('ppp: '+this.STEP,                    10, fontsize*count);count++;
+  c.fillText('final edge: '+(this.edge).toFixed(2),10, fontsize*count);count++;
+}
 init.prototype.one_step = function(iters) {
   this.execute(iters);
 }
 init.prototype.create_nuclei = function() {
   var sim = this;
-  for(var i=sim.RADIUS-2; i<sim.RADIUS+2; i++) {
-    for(var j=sim.RADIUS-2; j<sim.RADIUS+2; j++) {
-      sim.grid[i][j] = 1;
-      draw_point(sim, i, j);
+  sim.grid[sim.RADIUS][sim.RADIUS] = 1;
+  draw_point(this, sim.RADIUS, sim.RADIUS);
+  /*if(sim.GRID_STYLE=="hex") {
+    var center_neigh = get_hex_neighbors(sim.RADIUS, sim.RADIUS);
+    sim.grid[sim.RADIUS][sim.RADIUS] = 1;
+    draw_point(this, sim.RADIUS, sim.RADIUS);
+    for(var i=0; i < center_neigh.length; i++) {
+      var x = center_neigh[i][0];
+      var y = center_neigh[i][1];
+      sim.grid[x][y] = 1;
+      draw_point(this, x, y);
     }
-  }
+  } else {
+    for(var i=sim.RADIUS-1; i<=sim.RADIUS+1; i++) {
+      for(var j=sim.RADIUS-1; j<=sim.RADIUS+1; j++) {
+        sim.grid[i][j] = 1;
+        draw_point(sim, i, j);
+      }
+    }
+  }*/
 }
 init.prototype.save = function() {
   window.open( this.canvas.toDataURL('image/png'), 'mywindow' );
@@ -209,6 +239,27 @@ function draw_point(sim,x,y,exception) {
     }
   }
 }
+function draw_hex_neighbors(sim, x, y, t) {
+  var neigh_coords = get_hex_neighbors(x, y);
+  for(var i=0; i < neigh_coords.length; i++) {
+    draw_point(sim, neigh_coords[i][0],neigh_coords[i][1], t)
+  }
+}
+function get_hex_neighbors(x, y) {
+  neigh = []
+  neigh.push([x-1,y])
+  neigh.push([x+1,y])
+  neigh.push([x,y-1])
+  neigh.push([x,y+1])
+  if(x%2==0) {
+    neigh.push([x+1, y-1])
+    neigh.push([x-1, y-1])
+  } else {
+    neigh.push([x-1, y+1])
+    neigh.push([x+1, y+1])
+  }
+  return neigh;
+}
 function clear_point(x,y) {
   var c = sim.context;
   c.fillStyle = '#fff'; 
@@ -284,24 +335,5 @@ var options = function () {
   console.log("iters (75) [5..]: The number of particles that get created on the web worker at each call. I have not tested a value larger than 10000");
   console.log("ppp                (1) [1..10]: The number of pixels for one particle width, pixels per particle. This just makes the image larger.");
   console.log("grid               ('classic') ['classic', 'classic8', 'hex', 'nogrid']: The style of discretization. This impacts the number of available neighbors");
-}
-
-function neighbors_classic(sim, x, y) {
-  var neigh = []
-  var grid = sim.grid;
-  neigh.push(neigh_hash(x-1, y))
-  neigh.push(neigh_hash(x+1, y))
-  neigh.push(neigh_hash(x, y-1))
-  neigh.push(neigh_hash(x, y+1))
-  if(sim.GRID_STYLE=="classic8") {
-    neigh.push([x+1,y-1,grid[x+1][y-1]])
-    neigh.push([x+1,y+1,grid[x+1][y+1]])
-    neigh.push([x-1,y-1,grid[x-1][y-1]])
-    neigh.push([x-1,y+1,grid[x-1][y+1]])
-  }
-  function neigh_hash(x, y) {
-    return {'x':x, 'y':y, 'z':grid[x][y]}
-  }
-  return neigh;
 }
 </script>
