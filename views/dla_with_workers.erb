@@ -1,4 +1,4 @@
-<div id="functions" style="clear:both;">
+<div id="fire" style="clear:both;">
 <button onclick="startSimulation()">Start or restart</button>
 <button onclick="playSim()">Play</button></br>
 <button onclick="pauseSim()">Pause</button></br>
@@ -41,7 +41,7 @@ function init(options) {
   that.canvas.height = that.CANVAS_HEIGHT;
   $(that.canvas).addClass("mycanvas");
   //document.body.appendChild(that.canvas);
-  $("#functions").after(that.canvas);
+  $("#fire").after(that.canvas);
   $(that.canvas).before(sim_stats());
   that.context = that.canvas.getContext('2d');
 
@@ -253,17 +253,17 @@ function startSimulation(options) {
 }
 function playSim() {
   if(simulations.length) {
-    simulations[simulations.length-1].play();
+    _.last(simulations).play();
   }
 }
 function pauseSim() {
   if(simulations.length) {
-    simulations[simulations.length-1].pause();
+    _.last(simulations).pause();
   }
 }
 $(".saveSim").live("click", function() {
   var id = $(".saveSim").index(this);
-  simulations[simulations.length-1-id].save();
+  _.last(simulations).save();
 });
 function random_from_polar(r, RADIUS) {
   var angle = Math.random()*2*Math.PI;
@@ -318,18 +318,14 @@ function coord_has_neighbor(sim, x,y) {
     return num;
   }
 }
-function get_neighbors_of(sim, x, y) {
+function neighbors_classic(sim, x, y) {
   var neigh = []
   var grid = sim.grid;
   neigh.push(neigh_hash(x-1, y))
   neigh.push(neigh_hash(x+1, y))
   neigh.push(neigh_hash(x, y-1))
   neigh.push(neigh_hash(x, y+1))
-  if(sim.GRID_STYLE=="hex") {
-    neigh.push(neigh_hash(x-1, y+1))
-    neigh.push(neigh_hash(x+1, y+1))
-  }
-  else if(sim.GRID_STYLE=="classic8") {
+  if(sim.GRID_STYLE=="classic8") {
     neigh.push([x+1,y-1,grid[x+1][y-1]])
     neigh.push([x+1,y+1,grid[x+1][y+1]])
     neigh.push([x-1,y-1,grid[x-1][y-1]])
@@ -339,5 +335,8 @@ function get_neighbors_of(sim, x, y) {
     return {'x':x, 'y':y, 'z':grid[x][y]}
   }
   return neigh;
+}
+function neighbors_hex(sim, i, j, k) {
+
 }
 </script>

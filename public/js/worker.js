@@ -8,11 +8,11 @@ self.addEventListener('message', function(e) {
     var max_dist = 0;
     var walk_function = classic8_walk; //function() { if(data.grid_style==='hex') { return hex_walk;} else if(data.grid_style==="classic8") { return classic8_walk;} else { return classic_walk;};}
     for(var i=0; i < data.num; i++) {
-      var c = random_from_polar(edge, data.radius);
+      var c = random_classic(edge, data.radius);
       while(coord_has_neighbor(grid, c, data)==0) {
         c = walk_function(c);
         if(!valid_coords(grid,c) || too_far_away(c,edge, data.radius, true)) {
-          c = random_from_polar(edge, data.radius);
+          c = random_classic(edge, data.radius);
         }
         iter+=1;
       }
@@ -35,7 +35,7 @@ function too_far_away(c, radius, radius, delete_far) {
     return false;
   }
 }
-function random_from_polar(r, radius) {
+function random_classic(r, radius) {
   var angle = Math.random()*2*Math.PI;
   var x = Math.floor(r*Math.cos(angle))+radius
   var y = Math.floor(r*Math.sin(angle))+radius
@@ -52,10 +52,6 @@ function coord_has_neighbor(grid, c, data) {
   num+= occupied(x+1,y) ? 1: 0;
   num+= occupied(x,y-1) ? 1: 0;
   num+= occupied(x,y+1) ? 1: 0;
-  if(data.grid_style=="hex") {
-    num+= occupied(x-1,y+1) ? 1: 0;
-    num+= occupied(x+1,y+1) ? 1: 0;
-  }
   else if(data.grid_style=="classic8") {
     num+= occupied(x+1,y-1) ? 1: 0;
     num+= occupied(x+1,y+1) ? 1: 0;
@@ -78,19 +74,7 @@ function coord_has_neighbor(grid, c, data) {
     return num;
   }
 }
-function hex_walk(c) {
-  var p = Math.floor(Math.random()*4)
-  var x=c.x, y=c.y;
-  switch(p) {
-    case 0: x = x+1; break;
-    case 1: x = x-1; break;
-    case 2: y = y+1; break;
-    case 3: y = y-1; break;
-    //case 4: x = x-1; y = y+1; break;
-    //case 5: x = x+1; y = y+1; break;
-  }
-  return {'x':x, 'y':y};
-}
+
 function classic_walk(c) {
   var x=c.x, y=c.y;
   var p = Math.floor(Math.random()*4)
@@ -117,3 +101,83 @@ function classic8_walk(c) {
   }
   return {'x':x, 'y':y};
 }
+
+// Hexagonal stuff below here
+function random_hex(drop_r, max_r) {
+  var z = Math.floor(Math.random()*drop_r*2)-drop_r
+  var x = Math.floor(Math.random()*drop_r*2)-drop_r
+  if(z > 0) {
+    x = Math.abs(x)*(-1);
+    y = drop_r+x
+  } else {
+    x = Math.abs(x);
+    y = drop_r-x
+  }
+  return [x,y,z]
+  //var corner = Math.floor(Math.random()*6)
+  //var res = multiply(hex_identity[corner], drop_r)
+  //return {'x':res[0], 'y':res[1], 'z':res[2]};
+}
+function hex_walk(c) {
+  var p = Math.floor(Math.random()*6)
+  var i=c.i, j=c.j, k=c.k;
+  switch(p) {
+    case 0: j+=  1; k+= -1; break; //[ 0, 1,-1]
+    case 1: j+= -1; k+=  1; break; //[ 0,-1, 1]
+    case 2: i+=  1; k+= -1; break; //[ 1, 0,-1]
+    case 3: i+= -1; k+=  1; break; //[-1, 0, 1] 
+    case 4: i+=  1; j+= -1; break; //[ 1,-1, 0]
+    case 5: i+= -1; j+=  1; break; //[-1, 1, 0]
+  }
+  return {'i':i, 'j':j, 'k':k};
+}
+// Ordered counter clockwise from
+// http://stackoverflow.com/questions/2049196/generating-triangular-hexagonal-coordinates-xyz
+var hex_identity = [
+                    [ 1,-1, 0],
+                    [ 0,-1, 1],
+                    [-1, 0, 1],
+                    [-1, 1, 0],
+                    [ 0, 1,-1],
+                    [ 1, 0,-1]
+                    ]
+function multiply(ary, num) {
+  var res = []
+  for(var i=0; i< ary.length; i++) {
+    res[i] = ary[i]*num;
+  }
+  return res;
+}
+function sum_array(ary1, ary2) {
+  var res = []
+  for(var i=0; i< ary1.length; i++) {
+    res[i] = ary1[i]+ary2[i]; 
+  }
+  return res;
+}
+function all_neighbors_hex(v) {
+  var neigh = []
+  for(var i=0; i< 6; i++) {
+  neigh.push(sum_array(v, hex_identity[i]));
+  console.log(sum_array(v, hex_identity[i]))
+  }
+  return neigh;
+}
+function random_corner(r) {
+  var n = Math.floor(Math.random()*6); 
+  var c = multiply(hex_identity[n], r); 
+
+  var p = Math.floor(Math.random()*2*(r-1)) - (r-1);
+  console.log({'p':p, 'n':n, 'c':c})
+  if(p==0) {
+    return c;
+  } else if(p>0) {
+    var id = (n + 2) % 6;
+    return sum_array(c, multiply(hex_identity[id], p))
+  } else {
+    p = Math.abs(p);
+    var id = (n + 4) % 6;
+    return sum_array(c, multiply(hex_identity[id], p))
+  }
+}
+
