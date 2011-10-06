@@ -247,7 +247,7 @@ function startSimulation(options) {
   options = options || {};
   pauseSim();
   var sim = new init(options)
-  //sim.play(options['iters'] || 75);
+  sim.play(options['iters'] || 75);
   simulations.push(sim);
   return sim;
 }

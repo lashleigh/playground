@@ -6,10 +6,20 @@ self.addEventListener('message', function(e) {
     var coords = [];
     var edge = data.edge;
     var max_dist = 0;
-    var walk_function = hex_walk; //function() { if(data.grid_style==='hex') { return hex_walk;} else if(data.grid_style==="classic8") { return classic8_walk;} else { return classic_walk;};}
+    var walk_function, neigh_func;
+    if(data.grid_style==='hex') { 
+      walk_function = hex_walk;
+      neigh_func = has_neighbor_hex;
+    } else if(data.grid_style==="classic8") { 
+      walk_function = classic8_walk;
+      neigh_func = has_neighbor_8;
+    } else { 
+      walk_function = classic_walk;
+      neigh_func = has_neighbor;
+    }
     for(var i=0; i < data.num; i++) {
       var c = random_classic(edge, data.radius);
-      while(coord_has_neighbor(grid, c, data)==0) {
+      while(neighbors(grid, c, data, neigh_func)==0) {
         c = walk_function(c);
         if(!valid_coords(grid,c) || too_far_away(c,edge, data.radius, true)) {
           c = random_classic(edge, data.radius);
@@ -44,35 +54,43 @@ function random_classic(r, radius) {
 function valid_coords(grid, c) {
   return grid[c.x] && grid[c.x][c.y] !== undefined;
 }
-function coord_has_neighbor(grid, c, data) {
+function occupied(grid,x,y) {
+  return grid[x] && grid[x][y];
+}
+function has_neighbor(grid, c, data) {
   var num=0;
   var x = c.x, y=c.y;
-  num+= occupied(x,y)   ? 1: 0;
-  num+= occupied(x-1,y) ? 1: 0;
-  num+= occupied(x+1,y) ? 1: 0;
-  num+= occupied(x,y-1) ? 1: 0;
-  num+= occupied(x,y+1) ? 1: 0;
-  if(data.grid_style=="hex") {
-    if(x%2==0) {
-      num+= occupied(x+1, y-1)
-      num+= occupied(x-1, y-1)
-    } else {
-      num+= occupied(x-1, y+1)
-      num+= occupied(x+1, y+1)
-    }
-  }
-  else if(data.grid_style=="classic8") {
-    num+= occupied(x+1,y-1) ? 1: 0;
-    num+= occupied(x+1,y+1) ? 1: 0;
-    num+= occupied(x-1,y-1) ? 1: 0;
-    num+= occupied(x-1,y+1) ? 1: 0;
-  }
+  num+= occupied(grid,x,y)   ? 1: 0;
+  num+= occupied(grid,x-1,y) ? 1: 0;
+  num+= occupied(grid,x+1,y) ? 1: 0;
+  num+= occupied(grid,x,y-1) ? 1: 0;
+  num+= occupied(grid,x,y+1) ? 1: 0;
 
-  function occupied(x,y) {
-    return grid[x] && grid[x][y];
+  return num;
+}
+function has_neighbor_hex(grid, c, data) {
+  var num = has_neighbor(grid, c, data)
+  var x = c.x, y=c.y;
+  if(x%2==0) {
+    num+= occupied(grid,x+1, y-1)
+    num+= occupied(grid,x-1, y-1)
+  } else {      
+    num+= occupied(grid,x-1, y+1)
+    num+= occupied(grid,x+1, y+1)
   }
-  //TODO This a hack, basically saying the more neighbors you have the more likely
-  //you are to stay stuck.
+  return num;
+}
+function has_neighbor_8(grid, c, data) {
+  var num = has_neighbor(grid, c, data)
+  var x = c.x, y=c.y;
+  num+= occupied(grid,x+1,y-1) ? 1: 0;
+  num+= occupied(grid,x+1,y+1) ? 1: 0;
+  num+= occupied(grid,x-1,y-1) ? 1: 0;
+  num+= occupied(grid,x-1,y+1) ? 1: 0;
+  return num;
+}                
+function neighbors(grid, c, data, neigh_func) {
+  var num = neigh_func(grid, c, data);
   if(data.sticking_prob) { 
     if(Math.random() < data.sticking_prob*num) {
       return num;
@@ -83,7 +101,6 @@ function coord_has_neighbor(grid, c, data) {
     return num;
   }
 }
-
 function classic_walk(c) {
   var x=c.x, y=c.y;
   var p = Math.floor(Math.random()*4)
