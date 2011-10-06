@@ -10,6 +10,9 @@ function sim_stats() {
   return '<div class="result"></div><div class="time"></div><button class="saveSim" id="sim_'+simulations.length+'">Save</button></br>'
 }
 var HALF_ROOT_THREE = Math.sqrt(3)/2
+var total_iters = 0;
+var oob = 0;
+var oobs = [];
 
 function init(options) {
   var that = this;
@@ -59,6 +62,7 @@ function init(options) {
   worker.addEventListener('message', function(e) {
     var res = e.data;
     that.edge = res.edge;
+    total_iters += res.iter;
     //console.log(that.edge, res.max_dist, Math.sqrt(res.max_dist));
     for(var i = 0; i < res.coords.length; i++) {
       if(i%25===0) { TIME += 1; that.COLOR = makeColor(TIME);}
@@ -66,7 +70,7 @@ function init(options) {
       var y = res.coords[i].y;
       that.grid[x][y] += 1;
       draw_point(that, x, y); 
-      if(that.grid[x][y] > 1) {console.log(x, y)};
+      if(that.grid[x][y] > 1) {oob++;oobs.push([x,y])};
     }
     $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
     if((res.iter != 0) && (res.max_dist < that.RADIUS*that.RADIUS)) {
@@ -98,7 +102,6 @@ init.prototype.play = function(iters) {
 init.prototype.finish = function() {
   this.finish_time = new Date();
   var duration = (this.finish_time-this.start_time)/1000.0
-  $(".time").first().text("Finished in: "+duration+" sec");
   var c= this.context; 
   var fontsize = this.CANVAS_WIDTH/45;
   var count = 1;
@@ -114,6 +117,7 @@ init.prototype.finish = function() {
   var occupation = this.grid_occupation()
   c.fillText('particles: '+occupation.total,10, fontsize*count);count++;
   c.fillText('sites: '+occupation.num,10, fontsize*count);count++;
+  c.fillText('iters: '+total_iters,10, fontsize*count);count++;
 }
 init.prototype.one_step = function(iters) {
   this.execute(iters);
@@ -122,24 +126,6 @@ init.prototype.create_nuclei = function() {
   var sim = this;
   sim.grid[sim.RADIUS][sim.RADIUS] = 1;
   draw_point(this, sim.RADIUS, sim.RADIUS);
-  /*if(sim.GRID_STYLE=="hex") {
-    var center_neigh = get_hex_neighbors(sim.RADIUS, sim.RADIUS);
-    sim.grid[sim.RADIUS][sim.RADIUS] = 1;
-    draw_point(this, sim.RADIUS, sim.RADIUS);
-    for(var i=0; i < center_neigh.length; i++) {
-      var x = center_neigh[i][0];
-      var y = center_neigh[i][1];
-      sim.grid[x][y] = 1;
-      draw_point(this, x, y);
-    }
-  } else {
-    for(var i=sim.RADIUS-1; i<=sim.RADIUS+1; i++) {
-      for(var j=sim.RADIUS-1; j<=sim.RADIUS+1; j++) {
-        sim.grid[i][j] = 1;
-        draw_point(sim, i, j);
-      }
-    }
-  }*/
 }
 init.prototype.save = function() {
   window.open( this.canvas.toDataURL('image/png'), 'mywindow' );
@@ -308,6 +294,7 @@ function makeColor(index) {
   return "#" + red(index) + green(index) + blue(index);
 }
 function startSimulation(options) {
+  total_iters = 0;
   options = options || {};
   pauseSim();
   var sim = new init(options)

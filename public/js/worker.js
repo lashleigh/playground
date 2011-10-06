@@ -21,14 +21,14 @@ self.addEventListener('message', function(e) {
       var c = random_classic(edge, data.radius);
       while(neighbors(grid, c, data, neigh_func)==0) {
         c = walk_function(c);
-        if(!valid_coords(grid,c) || too_far_away(c,edge, data.radius, true)) {
+        if(!valid_coords(grid,c,data.radius) || too_far_away(c,edge, data.radius, true)) {
           c = random_classic(edge, data.radius);
         }
         iter+=1;
       }
       var dist = Math.floor((c.x-data.radius)*(c.x-data.radius)+(c.y-data.radius)*(c.y-data.radius));
-      if(dist > max_dist) {max_dist = dist; edge = Math.sqrt(dist)+15; }
-      grid[c.x][c.y] += 1;
+      if(dist > max_dist) {max_dist = dist; edge = Math.sqrt(dist)+25; }
+      grid[c.x][c.y]+= 1;
       coords.push(c);
     }
     self.postMessage({'iter':iter, 'coords':coords, 'edge':edge, 'max_dist':max_dist});
@@ -51,47 +51,65 @@ function random_classic(r, radius) {
   var y = Math.floor(r*Math.sin(angle))+radius
   return {'x':x, 'y':y};
 }
-function valid_coords(grid, c) {
-  return grid[c.x] && grid[c.x][c.y] !== undefined;
+function valid_coords(grid, c, r) {
+  return (c.x > 0) && (c.x < 2*r) && (c.y > 0) && (c.y<2*r) //_.isArray(grid[c.x]) && _.isNumber(grid[c.x][c.y]);
 }
-function occupied(grid,x,y) {
-  return grid[x] && grid[x][y];
+function valid_and_occupied(grid,x,y,r) {
+  return valid_coords(grid, {'x':x, 'y':y}, r) && (grid[x][y] > 0)
+}
+function occupied(grid, x, y) {
+  return grid[x][y] > 0
 }
 function has_neighbor(grid, c, data) {
   var num=0;
   var x = c.x, y=c.y;
-  num+= occupied(grid,x,y)   ? 1: 0;
-  num+= occupied(grid,x-1,y) ? 1: 0;
-  num+= occupied(grid,x+1,y) ? 1: 0;
-  num+= occupied(grid,x,y-1) ? 1: 0;
-  num+= occupied(grid,x,y+1) ? 1: 0;
-
+  var r = data.radius;
+  if( (x >=1) && (x <= 2*r-2) && (y >= 1) && (y <= 2*r-2)) {
+    num+= occupied(grid,x,y,r)   ? 1: 0;
+    num+= occupied(grid,x-1,y,r) ? 1: 0;
+    num+= occupied(grid,x+1,y,r) ? 1: 0;
+    num+= occupied(grid,x,y-1,r) ? 1: 0;
+    num+= occupied(grid,x,y+1,r) ? 1: 0;
+  } else {
+    num+= valid_and_occupied(grid,x,y,r)   ? 1: 0;
+    num+= valid_and_occupied(grid,x-1,y,r) ? 1: 0;
+    num+= valid_and_occupied(grid,x+1,y,r) ? 1: 0;
+    num+= valid_and_occupied(grid,x,y-1,r) ? 1: 0;
+    num+= valid_and_occupied(grid,x,y+1,r) ? 1: 0;
+  }
   return num;
 }
 function has_neighbor_hex(grid, c, data) {
   var num = has_neighbor(grid, c, data)
   var x = c.x, y=c.y;
+  var r = data.radius;
   if(x%2==0) {
-    num+= occupied(grid,x+1, y-1)
-    num+= occupied(grid,x-1, y-1)
-  } else {      
-    num+= occupied(grid,x-1, y+1)
-    num+= occupied(grid,x+1, y+1)
+    num+= valid_and_occupied(grid,x+1, y-1,r)
+    num+= valid_and_occupied(grid,x-1, y-1,r)
+  } else {                   
+    num+= valid_and_occupied(grid,x-1, y+1,r)
+    num+= valid_and_occupied(grid,x+1, y+1,r)
   }
   return num;
 }
 function has_neighbor_8(grid, c, data) {
   var num = has_neighbor(grid, c, data)
-  var x = c.x, y=c.y;
-  num+= occupied(grid,x+1,y-1) ? 1: 0;
-  num+= occupied(grid,x+1,y+1) ? 1: 0;
-  num+= occupied(grid,x-1,y-1) ? 1: 0;
-  num+= occupied(grid,x-1,y+1) ? 1: 0;
+  // If there is no primary match then it can't stick
+  // Allowing particles to stick on only a diagonal
+  // match results in unrealistic cross hatch
+  //if(num>0) {
+    var x = c.x, y=c.y;
+    var r = data.radius;
+    num+= valid_and_occupied(grid,x+1,y-1,r) ? 1: 0;
+    num+= valid_and_occupied(grid,x+1,y+1,r) ? 1: 0;
+    num+= valid_and_occupied(grid,x-1,y-1,r) ? 1: 0;
+    num+= valid_and_occupied(grid,x-1,y+1,r) ? 1: 0;
+  //}
   return num;
 }                
 function neighbors(grid, c, data, neigh_func) {
   var num = neigh_func(grid, c, data);
-  if(data.sticking_prob) { 
+  if(data.sticking_prob && data.sticking_prob < 1.0) { 
     if(Math.random() <= data.sticking_prob*num) {
       return num;
     } else {
