@@ -19,13 +19,13 @@ function init(options) {
   this.RADIUS = options['radius'] ? Math.floor(options['radius']) : 200;
   this.STEP = options['ppp'] ? Math.floor(options['ppp']) : 3;
   this.CANVAS_WIDTH = this.RADIUS*2*this.STEP;
-  this.CANVAS_HEIGHT = this.CANVAS_WIDTH*1/HALF_ROOT_THREE;
+  this.CANVAS_HEIGHT = options['grid']=='hex' ? this.CANVAS_WIDTH*1/HALF_ROOT_THREE : this.CANVAS_WIDTH;
   this.GRID_STYLE = options['grid'] || 'hex';
 
   this.idle = true;
   this.grid;
   this.edge = 25; 
-  this.sticking_prob = options['sticking_prob'] || 1.0;
+  this.sticking_prob = options['stick'] || 1.0;
 
   this.start_time = new Date();
   this.finish_time;
@@ -99,7 +99,7 @@ init.prototype.finish = function() {
   var duration = (this.finish_time-this.start_time)/1000.0
   $(".time").first().text("Finished in: "+duration+" sec");
   var c= this.context; 
-  var fontsize = 20;
+  var fontsize = this.CANVAS_WIDTH/45;
   var count = 1;
   c.fillStyle = '#000';
   c.font      = 'italic '+fontsize+'px sans-serif';
@@ -108,8 +108,11 @@ init.prototype.finish = function() {
   c.fillText('radius: '+this.RADIUS,               10, fontsize*count);count++;
   c.fillText('grid style: '+this.GRID_STYLE,       10, fontsize*count);count++;
   c.fillText('sticking prob: '+this.sticking_prob, 10, fontsize*count);count++;
-  c.fillText('ppp: '+this.STEP,                    10, fontsize*count);count++;
-  c.fillText('final edge: '+(this.edge).toFixed(2),10, fontsize*count);count++;
+  //c.fillText('ppp: '+this.STEP,                    10, fontsize*count);count++;
+  //c.fillText('final edge: '+(this.edge).toFixed(2),10, fontsize*count);count++;
+  //var occupation = this.grid_occupation()
+  c.fillText('particles: '+occupation.total,10, fontsize*count);count++;
+  c.fillText('sites: '+occupation.num,10, fontsize*count);count++;
 }
 init.prototype.one_step = function(iters) {
   this.execute(iters);
@@ -164,13 +167,16 @@ init.prototype.draw_circle = function(r) {
   for(var i=0; i<r*8; i++) {c = random_from_polar(r, this.RADIUS); draw_point(this, c.x, c.y, true)}
 }
 init.prototype.grid_occupation = function() {
-  var num = 0
+  var num = 0;
+  var total = 0;
   for(var i=0; i< this.RADIUS*2; i++) {
     for(var j=0; j < this.RADIUS*2; j++) {
-      num += this.grid[i][j];
+      var r = this.grid[i][j];
+      total += r;
+      if(r>0) {num++};
     }
   }
-  return num;
+  return {'total':total, 'num':num};
 }
 init.prototype.mass_at_radius = function(r) {
   var sim = this;

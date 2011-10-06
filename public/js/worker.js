@@ -185,7 +185,6 @@ function all_neighbors_hex(v) {
   var neigh = []
   for(var i=0; i< 6; i++) {
   neigh.push(sum_array(v, hex_identity[i]));
-  console.log(sum_array(v, hex_identity[i]))
   }
   return neigh;
 }
@@ -194,7 +193,6 @@ function random_corner(r, v) {
   var c = sum_array(multiply(hex_identity[n], r), v); 
 
   var p = Math.floor(Math.random()*2*(r-1)) - (r-1);
-  console.log({'p':p, 'n':n, 'c':c})
   if(p==0) {
     return c;
   } else if(p>0) {
