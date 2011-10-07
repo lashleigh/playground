@@ -1,12 +1,16 @@
 <div id="fire" style="clear:both;">
+  <label>Grid style:</label>
   <select id="grid_style" name="grid_style">
     <option value="hex">Hexagonal</option>
     <option value="classic">Classic (4 neighbors)</option>
     <option value="classic8">Classic (8 neighbors)</option>
-  </select>
-  <input id="radius" name="radius" type="number" step="any" min="100" max="5000" value="200" />
-  <input id="ppp" name="ppp" type="number" step="any" min="1" max="5" value="2.5" />
-  <input id="stick" name="stick" type="number" step="any" min="0.01" max="1.0" value="1.0" />
+  </select></br>
+  <label>Radius:</label>
+  <input id="radius" name="radius" type="number" step="any" min="100" max="5000" value="200" /></br>
+  <label>Pixels per particle:</label>
+  <input id="ppp" name="ppp" type="number" step="any" min="1" max="9" value="2.5" /></br>
+  <label>Sticking probability:</label>
+  <input id="stick" name="stick" type="number" step="any" min="0.01" max="1.0" value="1.0" /></br>
   
   <button onclick="startSimulation()">Start Simulation</button>
 </div>
@@ -69,6 +73,7 @@ function init(options) {
   function draw_worker_coords(res) {
     that.edge = res.edge;
     total_iters = res.iter;
+    that.grid = res.grid; //TODO take this away once the bugs are out
     TIME += 1; that.COLOR = makeColor(TIME);
     res.coords.forEach(function(c, index, array) {draw_point(that, c.x, c.y, true); })
     $('.result').first().text(res.iter+" and coords length: "+res.coords.length);

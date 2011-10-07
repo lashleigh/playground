@@ -9,14 +9,26 @@ self.addEventListener('message', function(e) {
     var max_dist = 0;
     var walk_function, neigh_func;
     if(data.grid_style==='hex') { 
-      walk_function = hex_walk;
       neigh_func = has_neighbor_hex;
+      if(data.sticking_prob < 1) {
+        walk_function = experimental_hex_walk;
+      } else {
+        walk_function = hex_walk;
+      }
     } else if(data.grid_style==="classic8") { 
-      walk_function = classic8_walk;
       neigh_func = has_neighbor_8;
+      if(data.sticking_prob < 1) {
+        walk_function = classic8_walk_with_sticking;
+      } else {
+        walk_function = classic8_walk;
+      }
     } else { 
-      walk_function = classic_walk;
       neigh_func = has_neighbor;
+      if(data.sticking_prob < 1) {
+        walk_function = classic_walk_with_sticking;
+      } else {
+        walk_function = classic_walk;
+      }
     }
     while(edge < data.radius) {
       var c = random_classic(edge, data.radius);
@@ -33,7 +45,7 @@ self.addEventListener('message', function(e) {
       coords.push(c);
       count++;  
       if(count % 20 === 0) {
-        self.postMessage({'status':'working', 'iter':iter, 'coords':coords, 'edge':edge, 'max_dist':max_dist});
+        self.postMessage({'status':'working', 'grid':grid, 'iter':iter, 'coords':coords, 'edge':edge, 'max_dist':max_dist});
         coords = [];
       }
     }
@@ -132,11 +144,6 @@ function classic8_walk(grid, c, r) {
   }
   return {'x':x, 'y':y};
 }
-var identity          = [[0,1], [1,0], [0, -1], [-1, 0]]
-var identity_for8     = [[0,1], [1,0], [0, -1], [-1, 0], [ 1, 1], [ 1,-1], [-1, -1], [-1, 1]]
-var identity_hex_even = [[0,1], [1,0], [0, -1], [-1, 0], [ 1,-1], [-1,-1]]
-var identity_hex_odd  = [[0,1], [1,0], [0, -1], [-1, 0], [-1, 1], [ 1, 1]]
-var identity_hex      = [identity_hex_even,identity_hex_odd]
 // Hexagonal stuff below here
 function random_hex(drop_r, max_r) {
   var z = Math.floor(Math.random()*drop_r*2)-drop_r
@@ -168,6 +175,44 @@ function hex_walk(grid, c, r) {
 }
 // Experimental looks for valid neighbors and then moves in a 
 // valid direction. Unfortunately it is very slow.
+function walk_from_valid_directions(directions, x, y) {
+  if(directions.length) {
+    var p = Math.floor(Math.random()*directions.length)
+    x += directions[p][0]
+    y += directions[p][1]
+    return {'x':x, 'y':y};
+  } else {
+    return false;
+  }
+}
+function classic_walk_with_sticking(grid, c, r) {
+  var x = c.x, y = c.y;  
+  var valid_directions = []
+  for(var i=0; i < 4; i++) {
+    var id = identity[i];
+    if(valid_and_empty(sum_array([x,y],id) )) {
+      valid_directions.push(id);
+    }
+  }
+  function valid_and_empty(v) {
+    return grid[v[0]] && grid[v[0]][v[1]] === 0 ? 1 : 0; 
+  }
+  return walk_from_valid_directions(valid_directions, x, y);
+}
+function classic8_walk_with_sticking(grid, c, r) {
+  var x = c.x, y = c.y;  
+  var valid_directions = []
+  for(var i=0; i < 8; i++) {
+    var id = identity_for8[i];
+    if(valid_and_empty(sum_array([x,y],id) )) {
+      valid_directions.push(id);
+    }
+  }
+  function valid_and_empty(v) {
+    return grid[v[0]] && grid[v[0]][v[1]] === 0 ? 1 : 0; 
+  }
+  return walk_from_valid_directions(valid_directions, x, y);
+}
 function experimental_hex_walk(grid, c, r) {
   var x = c.x, y = c.y;  
   var valid_directions = []
@@ -178,15 +223,19 @@ function experimental_hex_walk(grid, c, r) {
     }
   }
   function valid_and_empty(v) {
-    return grid[v[0]] && grid[v[0]][v[1]] === 0; 
+    return grid[v[0]] && grid[v[0]][v[1]] === 0 ? 1 : 0; 
   }
-  if(valid_directions.length) {
-    var p = Math.floor(Math.random()*valid_directions.length)
-    x += valid_directions[p][0]
-    y += valid_directions[p][1]
-    return {'x':x, 'y':y};
-  }  
+  return walk_from_valid_directions(valid_directions, x, y);
 }
+var identity          = [[0,1], [1,0], [0, -1], [-1, 0]]
+var identity_for8     = [[0,1], [1,0], [0, -1], [-1, 0], [ 1, 1], [ 1,-1], [-1, -1], [-1, 1]]
+var identity_hex_even = [[0,1], [1,0], [0, -1], [-1, 0], [-1, 1], [-1,-1]]
+var identity_hex_odd  = [[0,1], [1,0], [0, -1], [-1, 0], [ 1,-1], [ 1, 1]]
+var identity_hex      = [identity_hex_even,identity_hex_odd]
+//These are the identities for x stepping
+//var identity_hex_even = [[0,1], [1,0], [0, -1], [-1, 0], [ 1,-1], [-1,-1]]
+//var identity_hex_odd  = [[0,1], [1,0], [0, -1], [-1, 0], [-1, 1], [ 1, 1]]
+//var identity_hex      = [identity_hex_even,identity_hex_odd]
 // Ordered counter clockwise from
 // http://stackoverflow.com/questions/2049196/generating-triangular-hexagonal-coordinates-xyz
 var hex_identity = [
