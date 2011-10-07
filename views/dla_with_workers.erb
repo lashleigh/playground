@@ -24,6 +24,9 @@ var HALF_ROOT_THREE = Math.sqrt(3)/2
 var total_iters = 0;
 var oob = 0;
 var oobs = [];
+// Must always be an even number, or it will mess up hexagon drawing.
+// Should be very close to or less than the minimum drop distance.
+var CANVAS_OFFSET = 26; 
 
 function init(options) {
   var that = this;
@@ -33,7 +36,7 @@ function init(options) {
   this.RADIUS = options['radius'] ? Math.floor(options['radius']) : 200;
   this.STEP = options['ppp'] ? options['ppp'] : 3;
   this.GRID_STYLE = options['grid'] || 'hex';
-  this.CANVAS_HEIGHT = this.RADIUS*2*this.STEP;
+  this.CANVAS_HEIGHT = (this.RADIUS-CANVAS_OFFSET)*2*this.STEP;
   this.CANVAS_WIDTH = this.GRID_STYLE=='hex' ? this.CANVAS_HEIGHT*1/HALF_ROOT_THREE : this.CANVAS_HEIGHT;
 
   this.grid;
@@ -216,8 +219,10 @@ function make_hex(sim, x, y) {
   var r = sim.STEP/1.5;
   var h=HALF_ROOT_THREE*r;
   var c = sim.context;
+  x = x-CANVAS_OFFSET;
+  y = y-CANVAS_OFFSET;
   if(y%2==0) {
-    var y = (2*y-y/2-1)*r+2*r;;
+    var y = (2*y-y/2-1)*r+2*r;
     var x = (2*x-1)*h+2*h;
   } else {
     var y = (y+y/2)*r+r
@@ -244,7 +249,7 @@ function draw_point(sim,x,y,exception) {
       var c = sim.context;
       c.fillStyle = sim.COLOR;
       c.beginPath();
-      c.rect(x*sim.STEP, y*sim.STEP, sim.STEP, sim.STEP)
+      c.rect((x-CANVAS_OFFSET)*sim.STEP, (y-CANVAS_OFFSET)*sim.STEP, sim.STEP, sim.STEP)
       c.closePath();
       c.fill();
     }
