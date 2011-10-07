@@ -66,26 +66,22 @@ function init(options) {
 
   var worker = new Worker('js/worker.js');
 
+  function draw_worker_coords(res) {
+    that.edge = res.edge;
+    total_iters += res.iter;
+    TIME += 1; that.COLOR = makeColor(TIME);
+    res.coords.forEach(function(c, index, array) {draw_point(that, c.x, c.y, true); })
+    $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
+  }
   worker.addEventListener('message', function(e) {
     var res = e.data;
     if(res.status === 'complete') {
       that.statusString = "complete";
       that.grid = res.grid;
+      draw_worker_coords(res);
       that.finish();
     } else {
-      that.edge = res.edge;
-      total_iters += res.iter;
-      //console.log(res.max_dist);
-      //console.log(that.edge, res.max_dist, Math.sqrt(res.max_dist));
-      TIME += 1; that.COLOR = makeColor(TIME);
-      for(var i = 0; i < res.coords.length; i++) {
-        var x = res.coords[i].x;
-        var y = res.coords[i].y;
-        //that.grid[x][y] += 1;
-        draw_point(that, x, y, true); 
-        if(that.grid[x][y] > 1) {oob++;oobs.push([x,y])};
-      }
-      $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
+      draw_worker_coords(res);
     }
   }, false);
 

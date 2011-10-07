@@ -37,7 +37,7 @@ self.addEventListener('message', function(e) {
         coords = [];
       }
     }
-    self.postMessage({'status':'complete', 'grid':grid});
+    self.postMessage({'status':'complete', 'grid':grid, 'iter':iter, 'coords':coords, 'edge':edge, 'max_dist':max_dist});
   }
 }, false);
 
