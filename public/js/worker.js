@@ -75,13 +75,13 @@ function has_neighbor(grid, c) {
 function has_neighbor_hex(grid, c) {
   var num = has_neighbor(grid, c)
   var x = c.x, y=c.y;
-  if(x%2==0) {
-    num+= occupied(grid,x+1, y-1)
+  if(y%2==0) {
     num+= occupied(grid,x-1, y-1)
+    num+= occupied(grid,x-1, y+1)
     return num;
   } else {                   
-    num+= occupied(grid,x-1, y+1)
     num+= occupied(grid,x+1, y+1)
+    num+= occupied(grid,x+1, y-1)
     return num;
   }
 }
@@ -161,8 +161,8 @@ function hex_walk(grid, c, r) {
     case 1: x = x-1; break;
     case 2: y = y+1; break;
     case 3: y = y-1; break;
-    case 4: if(x%2==0) {x = x+1; y = y-1; } else {x = x-1; y = y+1;} break;
-    case 5: if(x%2==0) {x = x-1; y = y-1; } else {x = x+1; y = y+1;} break;
+    case 4: if(y%2==0) {x = x-1; y = y+1; } else {x = x+1; y = y-1;} break;
+    case 5: if(y%2==0) {x = x-1; y = y-1; } else {x = x+1; y = y+1;} break;
   }
   return {'x':x, 'y':y};
 }
@@ -172,7 +172,7 @@ function experimental_hex_walk(grid, c, r) {
   var x = c.x, y = c.y;  
   var valid_directions = []
   for(var i=0; i < 6; i++) {
-    var id = identity_hex[x%2][i];
+    var id = identity_hex[y%2][i];
     if(valid_and_empty(sum_array([x,y],id) )) {
       valid_directions.push(id);
     }

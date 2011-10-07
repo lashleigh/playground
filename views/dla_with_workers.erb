@@ -29,8 +29,8 @@ function init(options) {
   this.RADIUS = options['radius'] ? Math.floor(options['radius']) : 200;
   this.STEP = options['ppp'] ? options['ppp'] : 3;
   this.GRID_STYLE = options['grid'] || 'hex';
-  this.CANVAS_WIDTH = this.RADIUS*2*this.STEP;
-  this.CANVAS_HEIGHT = this.GRID_STYLE=='hex' ? this.CANVAS_WIDTH*1/HALF_ROOT_THREE : this.CANVAS_WIDTH;
+  this.CANVAS_HEIGHT = this.RADIUS*2*this.STEP;
+  this.CANVAS_WIDTH = this.GRID_STYLE=='hex' ? this.CANVAS_HEIGHT*1/HALF_ROOT_THREE : this.CANVAS_HEIGHT;
 
   this.grid;
   this.edge = 25; 
@@ -68,7 +68,7 @@ function init(options) {
 
   function draw_worker_coords(res) {
     that.edge = res.edge;
-    total_iters += res.iter;
+    total_iters = res.iter;
     TIME += 1; that.COLOR = makeColor(TIME);
     res.coords.forEach(function(c, index, array) {draw_point(that, c.x, c.y, true); })
     $('.result').first().text(res.iter+" and coords length: "+res.coords.length);
@@ -182,8 +182,8 @@ init.prototype.dimension = function() {
   }
   return masses;
 }
-function make_hex(sim, x, y, rad) {
-  var r = rad || sim.STEP/1.5;
+function make_hex_vert(sim, x, y, rad) {
+  var r = sim.STEP/1.5;
   var h=HALF_ROOT_THREE*r;
   var c = sim.context;
   if(x%2==1) {
@@ -195,6 +195,7 @@ function make_hex(sim, x, y, rad) {
   }
   c.fillStyle = sim.COLOR;
   c.beginPath();
+  
   c.moveTo(x-r/2, y+h);
   c.lineTo(x+r/2, y+h);
   c.lineTo(x+r,   y+0);
@@ -205,12 +206,29 @@ function make_hex(sim, x, y, rad) {
   
   c.closePath();
   c.fill();
-
-  if(rad) {
-    c.fillStyle = "#fff";
-    c.font      = 'italic 14px sans-serif';
-    c.fillText(Math.floor(y)+" "+Math.floor(x), x-r/2, y);
+}
+function make_hex(sim, x, y) {
+  var r = sim.STEP/1.5;
+  var h=HALF_ROOT_THREE*r;
+  var c = sim.context;
+  if(y%2==0) {
+    var y = (2*y-y/2-1)*r+2*r;;
+    var x = (2*x-1)*h+2*h;
+  } else {
+    var y = (y+y/2)*r+r
+    var x = x*2*h+2*h;
   }
+  c.fillStyle = sim.COLOR;
+  c.beginPath();
+  c.moveTo(x+0,  y-r);
+  c.lineTo(x+h,  y-r/2);
+  c.lineTo(x+h,  y+r/2);
+  c.lineTo(x-0,  y+r  );
+  c.lineTo(x-h,  y+r/2);
+  c.lineTo(x-h,  y-r/2);
+  c.lineTo(x+0,  y-r  );
+  c.closePath();
+  c.fill();
 }
 
 function draw_point(sim,x,y,exception) {
