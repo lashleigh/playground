@@ -10,14 +10,19 @@ var max_dist = 0;
 var CANVAS_WIDTH = 2*RADIUS;
 var CANVAS_HEIGHT = 2*RADIUS;
 var idle = true;
-var FPS = 30;
+var FPS = 60;
+var start_time;
+var TIME = Math.floor(Math.random()*1500);
 
 $(function() {
   var canvasElement = $("<canvas width='" + CANVAS_WIDTH + 
                         "' height='" + CANVAS_HEIGHT + "'></canvas>");
   canvas = canvasElement.get(0).getContext("2d");
+  canvas.fillStyle = '#fff';
+  canvas.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   canvasElement.appendTo('body');
 
+  start_time = new Date();
   var worker = new Worker('js/balls_worker.js');
   worker.postMessage({'cmd': 'init', 'RADIUS':RADIUS, 'PARTICLE_RADIUS':PARTICLE_RADIUS, 'drop_radius':drop_radius})
   function request_worker() {
@@ -27,8 +32,10 @@ $(function() {
   worker.addEventListener('message', function(e) {
     idle = true;
     var res = e.data;
-    //console.log(res);
+    console.log(res.ball);
+    if(res.drop_radius !== drop_radius) {console.log(drop_radius)}
     if(res.status === 'complete') {
+      TIME += 2;
       draw_ball(res.ball);
       balls.push(res.ball);
       drop_radius = res.drop_radius;
@@ -36,103 +43,49 @@ $(function() {
       draw_ball(res.ball);
       balls.push(res.ball);
     }
+    if(res.drop_radius > RADIUS) {
+      idle=false;
+      console.log("Finished in: ", ((new Date())-start_time)/1000, 'sec');
+      clearInterval(intervalID);
+    }
   }, false);
 
   var intervalID = setInterval(function() {
-    if(drop_radius > RADIUS) {
-      clearInterval(intervalID);
-    }
     if(idle) {
       request_worker();
-      //update();
-      //draw();
     }
   }, 1000/FPS);
 })
-
-function update() {
-  if(free_ball) {
-    free_ball = free_ball.walk();
-  } else {
-    free_ball = new Ball();
-  }
-  if(handleCollisions()) {
-    var dist = distance(free_ball, {'x':RADIUS, 'y':RADIUS});
-    if(dist > max_dist) {max_dist = dist; drop_radius = dist+25; console.log(drop_radius);}
-    balls.push(free_ball);
-    free_ball = new Ball();
-  }
-}
 function draw_ball(ball, color) {
-  canvas.fillStyle = "#000";
+  canvas.fillStyle = makeColor(TIME); 
   if(color) {canvas.fillStyle = color;}
   canvas.beginPath();
   canvas.arc(ball.x, ball.y, PARTICLE_RADIUS, 0, Math.PI*2, true);
   canvas.closePath();
   canvas.fill();
 }
-function draw() {
-  //canvas.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-  canvas.fillStyle = "#000";
-  draw_ball(free_ball);
-  //for(var i = 0; i < balls.length; i++) {
-  //  draw_ball(balls[i]);
-  //}
-}
-function collides(a, b) {
-  return distance_squared(a,b) < DIAMETE_SQUARED;
-}
-function distance_squared(a, b) {
- return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y) 
-}
-function distance(a,b) {
-  return Math.sqrt(distance_squared(a,b));
-}
-function handleCollisions() {
-  var me = free_ball;
-  var distances = _.map(balls, function(b) {return {'p':b, 'dist': distance_squared(free_ball, b)}});
-  var filtered = _.select(distances, overlapping);
-  if(filtered.length) {
-    var min_p = _.min(filtered, function(p) {return p.dist});
-    min_p.dist = Math.sqrt(min_p.dist);
-    console.log(min_p);
-    //while(min_p.dist < 2*PARTICLE_RADIUS) {
-      me.x -= (2*PARTICLE_RADIUS-min_p.dist)*Math.cos(me.angle)
-      me.y -= (2*PARTICLE_RADIUS-min_p.dist)*Math.sin(me.angle)
-      //min_p.dist = distance(me, min_p.p); 
-      console.log(min_p);
-    //}
-    return true;
-  }
-  return false;
-}
-function overlapping(element, index, array) {
-  return (element.dist < DIAMETE_SQUARED && element.dist !== 0);
-}
+// Do Awesome Things With Colors!
+function makeColor(index) {
+  index = index || Math.floor(Math.random()*1530);
+  function color(i) {
+    // Wrap around using modulus 
+    i = i % 1530;
 
-function Ball(x, y) {
-  this.angle = Math.random()*2*Math.PI;
-  this.x = x || drop_radius*Math.cos(this.angle) + RADIUS; //CANVAS_WIDTH*Math.random();
-  this.y = y || drop_radius*Math.sin(this.angle) + RADIUS; //CANVAS_HEIGHT*Math.random();
-  
-  return this;
-}
-Ball.prototype.walk = function() {
-  draw_ball(this, '#fff');
-  this.angle = Math.random()*2*Math.PI;
-  this.x += STEP_SIZE*Math.sin(this.angle);
-  this.y += STEP_SIZE*Math.cos(this.angle);
-  if(this.x < 0 || this.y < 0 || this.x > 2*RADIUS || this.y > 2*RADIUS) {
-    this.destroy();
-    return false;
-  } else if(distance(this, {'x':RADIUS, 'y':RADIUS}) > drop_radius+25) {
-    console.log(this, "outside zone");
-    this.destroy();
-    return false;
-  } else {
-    return this;
+    // Calculate the value
+    var v;
+    if(i < 255)       v = i;
+    else if(i < 765)  v = 255;
+    else if(i < 1020) v = 255 - (i - 765);
+    else              v = 0;
+
+    // Make it a zero-padded value
+    v = v.toString(16);
+    if(v.length == 1) return "0" + v;
+    else              return v;
   }
-};
-Ball.prototype.destroy = function() {
-  delete this;
+  function red(i)   { return color(i + 510); }
+  function green(i) { return color(i);        }
+  function blue(i)  { return color(i + 1020);  }
+
+  return "#" + red(index) + green(index) + blue(index);
 }
