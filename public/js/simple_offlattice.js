@@ -27,7 +27,7 @@ $(function() {
   worker.addEventListener('message', function(e) {
     idle = true;
     var res = e.data;
-    console.log(res);
+    //console.log(res);
     if(res.status === 'complete') {
       draw_ball(res.ball);
       balls.push(res.ball);
