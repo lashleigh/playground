@@ -3,7 +3,7 @@ var RADIUS;
 var PARTICLE_RADIUS;
 var STEP_SIZE;
 var DIAMETER_SQUARED;
-var BLOCK_WIDTH = 30; //RADIUS/(particleRadius*2*10);
+var BLOCK_WIDTH = 50; //RADIUS/(particleRadius*2*10);
 var PARTITION_DIM;
 var UNIQUE_ID = 0;
 
