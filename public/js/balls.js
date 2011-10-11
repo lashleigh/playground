@@ -29,11 +29,10 @@ function draw() {
   canvas.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   canvas.fillStyle = "#000";
   for(var i = 0; i < balls.length; i++) {
-  canvas.beginPath();
-  canvas.arc(balls[i].x_pos, balls[i].y_pos, 10, 0, Math.PI*2, true);
-  canvas.closePath();
-  canvas.fill();
-    //canvas.fillText("Sup Bro!"+i, balls[i].x_pos, balls[i].y_pos);
+    canvas.beginPath();
+    canvas.arc(balls[i].x_pos, balls[i].y_pos, 10, 0, Math.PI*2, true);
+    canvas.closePath();
+    canvas.fill();
   }
 }
 function collides(a, b) {
