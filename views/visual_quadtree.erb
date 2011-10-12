@@ -3,7 +3,6 @@
 </div>
 <script type="text/javascript" src="js/tree.js"></script>
 <script type="text/javascript" src="js/makeColor.js"></script>
-<script type="text/javascript" src="js/raphael-min.js"></script>
 
 <script>
   var PARTICLE_RADIUS = 10;
@@ -23,7 +22,6 @@
     canvas.fillStyle = '#fff';
     canvas.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     canvasElement.appendTo('body');
-
 
     trunk = new QuadTree(null, 0, CANVAS_WIDTH, 0, CANVAS_HEIGHT);
   });

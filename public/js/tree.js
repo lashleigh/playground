@@ -66,12 +66,24 @@ QuadTree.prototype.Search = function(p) {
   if(this.IsLeaf()) {
     return this.items;
   } else {
-    res = []
+    var res = [];
     var neighbors = this.Neighbors(p)
     for(var i=0; i < neighbors.length; i++) {
       res.push(neighbors[i].Search(p))
     }
     return _.flatten(res);
+  }
+}
+QuadTree.prototype.LeafLevelNeighbors = function(p) {
+  if(this.IsLeaf()) {
+    return this;
+  } else {
+    var res = [];
+    var neighbors = this.Neighbors(p)
+    for(var i=0; i < neighbors.length; i++) {
+      res.push(neighbors[i].LeafLevelNeighbors(p))
+    }
+    return _.flatten(res); //_.flatten(res);
   }
 }
 QuadTree.prototype.Neighbors = function(p) {

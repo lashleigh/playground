@@ -26,6 +26,9 @@ end
 get '/tree' do
   erb :visual_quadtree
 end
+get '/raphael' do
+  erb :raphael_tree
+end
 
 get '/application.css' do
   less :application

@@ -1,0 +1,96 @@
+<div id="fire" style="clear:both;">
+  <button onclick="addParticle()">Add 1 Particle</button>
+  <button onclick="addTenParticle()">Add 10 Particles</button>
+</div>
+<script type="text/javascript" src="js/tree.js"></script>
+<script type="text/javascript" src="js/makeColor.js"></script>
+<script type="text/javascript" src="js/raphael-min.js"></script>
+
+<script>
+  var PARTICLE_RADIUS = 10;
+  var RADIUS = 400;
+  var CANVAS_WIDTH = RADIUS*2;
+  var CANVAS_HEIGHT = RADIUS*2;
+  var trunk;
+  var particles = {};
+  var canvas;
+  var paper;
+  var background;
+  var TIME = Math.floor(Math.random()*1530);
+  var intervalID;
+  var UNIQUE_ID = 0;
+
+  QuadTree.prototype.DivisionParams = function() {
+    if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 8*PARTICLE_RADIUS)) {
+      this.Divide();
+    }
+  }
+
+  $(function() {
+    paper = Raphael(0, 50, CANVAS_WIDTH, CANVAS_HEIGHT);
+    clear();
+    trunk = new QuadTree(null, 0, CANVAS_WIDTH, 0, CANVAS_HEIGHT);
+  });
+
+  function clear() {
+    paper.clear()
+    background = paper.rect(0,0,CANVAS_WIDTH, CANVAS_HEIGHT)
+    background.attr({'fill':'#fff'}).mouseup(function(e) {
+      addParticle(e.offsetX, e.offsetY)
+    });
+  }
+  function addParticle(x, y) {
+    var p = new Particle(x, y, CANVAS_WIDTH)
+    UNIQUE_ID++;
+    p.id = UNIQUE_ID;
+    particles[p.id] = p;
+    trunk.Insert(p);
+    draw_tree();
+  }
+  function addTenParticle() {
+    for(var i=0; i < 10; i++) {
+      addParticle();
+    }
+  }
+  function draw_ball(ball, branch) {
+    var circle = paper.circle(ball.x, ball.y, 10);
+    circle.attr('fill', branch.color)
+    .data({'id':ball.id, 'branch':branch})
+    .mouseover(function() {
+      var neighbors = trunk.LeafLevelNeighbors(particles[this.data('id')])
+      for(var i=0; i < neighbors.length; i++) {
+        neighbors[i].rect.attr({'fill':'hsb(100, 1, 0.5)'});
+      }
+    }).mouseout(function() {
+      var neighbors = trunk.LeafLevelNeighbors(particles[this.data('id')])
+      for(var i=0; i < neighbors.length; i++) {
+        neighbors[i].rect.attr({'fill':''});
+      }
+    }); 
+  }
+  function draw_tree() {
+    clear();
+    find_branches(trunk);
+  }
+  function find_branches(b) {
+    if(!b.IsLeaf()) {
+      delete b['rect'];
+      find_branches(b.nw);
+      find_branches(b.sw);
+      find_branches(b.ne);
+      find_branches(b.se);
+    } else {
+      draw_branch(b);
+      for(var i=0; i < b.items.length; i++) {
+        draw_ball(b.items[i], b);
+      }
+    } 
+  }
+  function draw_branch(b) {
+    if(!b.color) {
+      b.color = makeColor();
+    }
+    b.rect = paper.rect(b.x_min, b.y_min, (b.x_max-b.x_min), (b.y_max-b.y_min)); 
+  }
+
+</script>
