@@ -1,0 +1,73 @@
+<div id="fire" style="clear:both;">
+  <button onclick="addParticle()">Add Particle</button>
+</div>
+<script type="text/javascript" src="js/tree.js"></script>
+<script type="text/javascript" src="js/makeColor.js"></script>
+<script type="text/javascript" src="js/raphael-min.js"></script>
+
+<script>
+  var PARTICLE_RADIUS = 10;
+  var RADIUS = 400;
+  var CANVAS_WIDTH = RADIUS*2;
+  var CANVAS_HEIGHT = RADIUS*2;
+  var trunk;
+  var particles = [];
+  var canvas;
+  var TIME = Math.floor(Math.random()*1530);
+  var intervalID;
+
+  $(function() {
+    var canvasElement = $("<canvas width='" + CANVAS_WIDTH + 
+      "' height='" + CANVAS_HEIGHT + "'></canvas>");
+    canvas = canvasElement.get(0).getContext("2d");
+    canvas.fillStyle = '#fff';
+    canvas.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    canvasElement.appendTo('body');
+
+
+    trunk = new QuadTree(null, 0, CANVAS_WIDTH, 0, CANVAS_HEIGHT);
+  });
+
+  function addParticle() {
+    var p = new Particle(false, false, CANVAS_WIDTH)
+    particles.push(p);
+    trunk.Insert(p);
+    draw_tree();
+  }
+  function draw_ball(ball, color) {
+    canvas.fillStyle = makeColor(TIME); 
+    if(color) {canvas.fillStyle = color;}
+    canvas.beginPath();
+    canvas.arc(ball.x, ball.y, PARTICLE_RADIUS, 0, Math.PI*2, true);
+    canvas.closePath();
+    canvas.fill();
+  }
+  function draw_tree() {
+    canvas.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    for(var i=0; i < particles.length; i++) {
+      draw_ball(particles[i]);
+    }
+    find_branches(trunk);
+  }
+  function find_branches(b) {
+    if(!b.IsLeaf()) {
+      find_branches(b.nw);
+      find_branches(b.sw);
+      find_branches(b.ne);
+      find_branches(b.se);
+    } else {
+      draw_branch(b);
+    } 
+  }
+  function draw_branch(b) {
+    canvas.lineWidth   = 2;
+
+    canvas.moveTo(b.x_min, b.y_min); // give the (x,y) coordinates
+    canvas.lineTo(b.x_max, b.y_min);  
+    canvas.lineTo(b.x_max, b.y_max); // give the (x,y) coordinates
+    canvas.lineTo(b.x_min, b.y_max);  
+
+    canvas.stroke();
+  }
+
+</script>

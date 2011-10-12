@@ -1,5 +1,6 @@
 var balls = [];
 var sim;
+var trunk;
 
 function init(h) {
   var that = this;
@@ -29,9 +30,10 @@ function init(h) {
   var worker = new Worker('js/balls_worker.js');
   worker.postMessage({'cmd': 'init', 'RADIUS':that.RADIUS, 'PARTICLE_RADIUS':that.PARTICLE_RADIUS, 'drop_radius':that.drop_radius})
   
-  function request_worker() {
-    that.idle = false;
-    worker.postMessage({'cmd': 'execute'})
+  function request_worker(command) {
+    command = command || 'execute';
+    if(command==='execute') {that.idle = false;}
+    worker.postMessage({'cmd': command})
   }
   worker.addEventListener('message', function(e) {
     that.idle = true;
@@ -45,6 +47,10 @@ function init(h) {
     } else if(res.status ==='init') {
       draw_ball(res.ball);
       that.balls.push(res.ball);
+      console.log(res);  
+    } else if(res.status === 'response') {
+      console.log(res); 
+      trunk = res.tree;
     }
     if(res.drop_radius > that.RADIUS) {
       that.idle=false;
@@ -84,12 +90,6 @@ function newSim(h) {
   }
   sim.play();
 }
-function pause() {
-  sim.pause();
-}
-function play() {
-  sim.play();
-}
 function get_options_from_form() {
   var res = {};
   if(document.getElementById("radius").checkValidity()) {res['dim'] = document.getElementById("radius").value;}
@@ -97,29 +97,4 @@ function get_options_from_form() {
   if(document.getElementById("ppp").checkValidity())    {res['radius'] =   document.getElementById("ppp").value;}
   console.log(res);
   newSim(res)
-}
-// Do Awesome Things With Colors!
-function makeColor(index) {
-  index = index || Math.floor(Math.random()*1530);
-  function color(i) {
-    // Wrap around using modulus 
-    i = i % 1530;
-
-    // Calculate the value
-    var v;
-    if(i < 255)       v = i;
-    else if(i < 765)  v = 255;
-    else if(i < 1020) v = 255 - (i - 765);
-    else              v = 0;
-
-    // Make it a zero-padded value
-    v = v.toString(16);
-    if(v.length == 1) return "0" + v;
-    else              return v;
-  }
-  function red(i)   { return color(i + 510); }
-  function green(i) { return color(i);        }
-  function blue(i)  { return color(i + 1020);  }
-
-  return "#" + red(index) + green(index) + blue(index);
 }
