@@ -21,10 +21,10 @@ function init(data) {
   DIAMETER_SQUARED = 4*PARTICLE_RADIUS*PARTICLE_RADIUS;
   trunk = new QuadTree(null, 0, 2*RADIUS, 0, 2*RADIUS);
 
-  var ball = new Ball(RADIUS, RADIUS);
-  balls.push(ball);
-  trunk.Insert(ball);
-  self.postMessage({'status':'init', 'ball':ball, 'trunk':trunk, 'message':'Initialize', 'RADIUS':RADIUS});
+  var p = new Ball(RADIUS, RADIUS);
+  balls.push(p);
+  trunk.Insert(p);
+  self.postMessage({'status':'init', 'ball':p, 'trunk':trunk, 'message':'Initialize', 'RADIUS':RADIUS});
 }
 self.addEventListener('message', function(e) {
   var data = e.data;

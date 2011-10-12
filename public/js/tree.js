@@ -102,10 +102,100 @@ QuadTree.prototype.Neighbors = function(p) {
   }
   return quadrants
 }
-function Particle(x, y, w) {
-  var w = w || 400;
-  this.x = x || Math.random()*w;
-  this.y = y || Math.random()*w;
+function Particle(x, y, w, offset) {
+  w = w || 400;
+  offset = offset || 0;
+  this.x = x || Math.random()*w+offset;
+  this.y = y || Math.random()*w+offset;
+  this.angle;
   return this;
 }
+Particle.prototype.walk = function(STEP_SIZE, max) {
+  this.angle = Math.random()*2*Math.PI;
+  this.x += STEP_SIZE*Math.sin(this.angle);
+  this.y += STEP_SIZE*Math.cos(this.angle);
+  if(this.x < 0 || this.y < 0 || this.x > max || this.y > max) {
+    this.destroy();
+    return false;
+  } else {
+    return this;
+  }
+}
+Particle.prototype.has_neighbors = function(trunk) {
+  var that = this;
+  var distances = _.map(trunk.Search(this), function(b) {return {'p':b, 'dist': distance_squared(that, b)}});
+  var filtered = _.select(distances, overlapping);
+  if(filtered.length) {
+    var min_p = _.min(filtered, function(p) {return p.dist});
+    min_p.dist = Math.sqrt(min_p.dist);
+    this.x -= (2*PARTICLE_RADIUS-min_p.dist)*Math.cos(this.angle)
+    this.y -= (2*PARTICLE_RADIUS-min_p.dist)*Math.sin(this.angle)
+    return true;
+  } else {
+    return false;
+  }
+}
+Particle.prototype.predictive_walk = function(step, max, trunk) {
+  var that = this;
+  that.angle = Math.random()*2*Math.PI;
+  while(that.angle % (Math.PI/2) === 0) {
+    that.angle = Math.random()*2*Math.PI;
+  }
+  var dx = step*Math.cos(that.angle);
+  var dy = step*Math.sin(that.angle);
+  if(that.inside_bounds(dx, dy, max)) {
+    var near = trunk.Search({'x':that.x+dx, 'y':that.y+dy});
+    var distances = _.map(near, function(p) {return {'p':p, 'dist':distance_squared({'x':that.x+dx, 'y':that.y+dy}, p)}})
+    var filtered = _.select(distances, overlapping);
+    if(filtered.length) {
+      var most_overlapping = _.min(filtered, function(p) {return p.dist});  
+      var x1 = most_overlapping.p.x - that.x;
+      var y1 = most_overlapping.p.y - that.y;
+      var m = dx/dy; 
+      var muv = (m*x1-y1)*(m*x1-y1);
+      var ddmm = DIAMETER_SQUARED*(m*m+1);
+      if(muv > ddmm) {
+        // This would only happen if the particle were actually too far away.
+        return {'stat':'destroy', 'p':that};
+      } else {
+        var x= ((1)*Math.sqrt(ddmm -muv) +m*y1 +x1)/(m*m+1)
+        var xneg = ((-1)*Math.sqrt(ddmm -muv) +m*y1 +x1)/(m*m+1)
+        if(m < 0) {
+          x = xneg;
+        }         
+        var y = m*x;
+        that.x += x;
+        that.y += y;
+       
+        return {'stat':'neighbor', 'p':that};
+      }
+    } else {
+      that.x += dx;
+      that.y += dy;
 
+      return {'stat':'walk', 'p':that};
+    }
+  } else {
+    return {'stat':'destroy', 'p':that};
+  }
+}
+Particle.prototype.inside_bounds = function(dx, dy, max) {
+  if(this.x+dx < 0 || this.y+dy < 0 || this.x+dx > max || this.y+dy > max) {
+    return false;
+  } else {
+    return this;
+  }
+}
+Particle.prototype.destroy = function() {
+  delete this;
+}
+
+function overlapping(element, index, array) {
+  return element.dist < DIAMETER_SQUARED-0.001; 
+}
+function distance_squared(a, b) {
+  return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)
+}
+function distance(a, b) {
+  return Math.sqrt(distance_squared(a,b));
+}
