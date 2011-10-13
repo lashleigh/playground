@@ -227,7 +227,7 @@ Particle.prototype.predictive_walk = function(step, max, trunk) {
 Particle.prototype.inside_bounds = function(dx, dy, max) {
   if(this.x+dx < 0 || this.y+dy < 0 || this.x+dx > max || this.y+dy > max) {
     return false;
-  } else if(distance(this, {'x':RADIUS, 'y':RADIUS}) > drop_radius+16*PARTICLE_RADIUS) {
+  } else if(distance(this, {'x':RADIUS, 'y':RADIUS}) > drop_radius+100*PARTICLE_RADIUS) {
     this.destroy();
     return false;
   } else {

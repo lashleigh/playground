@@ -47,7 +47,7 @@ function execute() {
   var stat = 'walk';
   var res;
   while(stat !== 'neighbor') {
-    res = p.vector_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
+    res = p.predictive_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
     p = res.p;
     stat = res.stat;
     if(stat==='destroy') {

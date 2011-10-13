@@ -23,7 +23,7 @@
   var TIME = Math.floor(Math.random()*1530);
   var intervalID;
   var UNIQUE_ID = 0;
-  var drop_radius = 6*PARTICLE_RADIUS;
+  var drop_radius = 50*PARTICLE_RADIUS;
   var max_dist = 0;
 
   QuadTree.prototype.DivisionParams = function() {
@@ -71,12 +71,12 @@
     var c = paper.circle(p.x, p.y, PARTICLE_RADIUS)
     var stat = 'walk'; 
     while(stat === 'walk' && drop_radius < RADIUS) {
-      var res = p.vector_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
+      var res = p.vector_walk(PARTICLE_RADIUS/2, CANVAS_WIDTH, trunk);
       p = res.p;
       stat = res.stat;
      
       switch(stat) {
-        case 'neighbor': if(!!p.x && !!p.y) {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+6*PARTICLE_RADIUS; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
+        case 'neighbor': if(!!p.x && !!p.y) {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+50*PARTICLE_RADIUS; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
         case 'destroy' : p = new Particle(); stat = 'walk'; break;
         default: break;
       }
@@ -111,7 +111,7 @@
       addParticle(e.offsetX, e.offsetY)
     });
     paper.circle(400, 400, drop_radius)
-    paper.circle(400, 400, drop_radius+8*PARTICLE_RADIUS)
+    paper.circle(400, 400, drop_radius+100*PARTICLE_RADIUS)
   }
   function addParticle(x, y) {
     var p = new Particle(x, y)
