@@ -1,7 +1,8 @@
 <div id="fire" style="clear:both;">
   <button onclick="addParticle()">Add 1 Particle</button>
   <button onclick="addTenParticle()">Add 10 Particles</button>
-  <button onclick="walk_one()">Visible Walk</button>
+  <button onclick="walk_one()">Fast Predictive Walk</button>
+  <button onclick="walk_one_with_interval()">Visible Walk</button>
   <button onclick="walk_fast()">Fast Walk</button>
 </div>
 <script type="text/javascript" src="js/tree.js"></script>
@@ -9,7 +10,7 @@
 <script type="text/javascript" src="js/raphael-min.js"></script>
 
 <script>
-  var PARTICLE_RADIUS = 10;
+  var PARTICLE_RADIUS = 5;
   var DIAMETER_SQUARED = 4*PARTICLE_RADIUS*PARTICLE_RADIUS;
   var RADIUS = 400;
   var CANVAS_WIDTH = RADIUS*2;
@@ -22,6 +23,8 @@
   var TIME = Math.floor(Math.random()*1530);
   var intervalID;
   var UNIQUE_ID = 0;
+  var drop_radius = 6*PARTICLE_RADIUS;
+  var max_dist = 0;
 
   QuadTree.prototype.DivisionParams = function() {
     if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 8*PARTICLE_RADIUS)) {
@@ -36,12 +39,12 @@
   });
 
   function walk_fast() {
-    var p = new Particle(false, false, CANVAS_WIDTH);
+    var p = new Particle();
     console.log('new', p);
     while(!p.has_neighbors(trunk)) {
       p = p.walk(PARTICLE_RADIUS, CANVAS_WIDTH);
       if(!p) {
-        p = new Particle(false, false, CANVAS_WIDTH)
+        p = new Particle()
         console.log("out of bounds", p);
       }
     }
@@ -58,16 +61,35 @@
     var x = p.x, y = p.y, 
         x2 = p.x+dx, y2 = p.y+dy; 
     paper.path("M"+x+" "+y+" L"+x2+" "+y2)
+    .mouseover(function() {
+      console.log(dy/dx, dx, dy);
+    })
   }
-
   function walk_one() {
-    var p = new Particle(false, false, CANVAS_WIDTH);
-    var c = paper.circle(p.x, p.y, 10)
-    console.log('new', p);
+    var p = new Particle();
+    while(p.has_neighbors(trunk)) { p = new Particle(); console.log("on top");}
+    var c = paper.circle(p.x, p.y, PARTICLE_RADIUS)
+    var stat = 'walk'; 
+    while(stat === 'walk' && drop_radius < RADIUS) {
+      var res = p.predictive_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
+      p = res.p;
+      stat = res.stat;
+     
+      switch(stat) {
+        case 'neighbor': if(!!p.x && !!p.y) {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+6*PARTICLE_RADIUS; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
+        case 'destroy' : p = new Particle(); stat = 'walk'; break;
+        default: break;
+      }
+    }
+  }
+  function walk_one_with_interval() {
+    var p = new Particle();
+    while(p.has_neighbors(trunk)) { p = new Particle(); console.log("on top");}
+    var c = paper.circle(p.x, p.y, PARTICLE_RADIUS)
     var stat = 'walk'; 
     setInterval(function() {
-      if(stat === 'walk') {
-        var res = p.walk(PARTICLE_RADIUS/8, CANVAS_WIDTH, trunk);
+      if(stat === 'walk' && drop_radius < RADIUS) {
+        var res = p.predictive_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
         p = res.p;
         stat = res.stat;
         //var anim = Raphael.animation({cx: p.x, cy: p.y}, 2e3);
@@ -75,12 +97,12 @@
         c.attr({'cx':p.x, 'cy':p.y});
        
         switch(stat) {
-          case 'neighbor': if(!!p.x && !!p.y) {addParticle(p.x, p.y);}; console.log('neighbor', p); break;
-          case 'destroy' : console.log(p, 'destroyed'); p = new Particle(); stat = 'walk'; break;
+          case 'neighbor': if(!!p.x && !!p.y) {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+6*PARTICLE_RADIUS; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
+          case 'destroy' : p = new Particle(); stat = 'walk'; break;
           default: break;
         }
       }
-    }, 1000/300);
+    }, 1000/1500);
   }
   function clear() {
     paper.clear()
@@ -88,9 +110,11 @@
     background.attr({'fill':'#fff'}).mouseup(function(e) {
       addParticle(e.offsetX, e.offsetY)
     });
+    paper.circle(400, 400, drop_radius)
+    paper.circle(400, 400, drop_radius+8*PARTICLE_RADIUS)
   }
   function addParticle(x, y) {
-    var p = new Particle(x, y, CANVAS_WIDTH)
+    var p = new Particle(x, y)
     UNIQUE_ID++;
     p.id = UNIQUE_ID;
     particles[p.id] = p;
@@ -103,7 +127,7 @@
     }
   }
   function draw_ball(ball, branch) {
-    var circle = paper.circle(ball.x, ball.y, 10);
+    var circle = paper.circle(ball.x, ball.y, PARTICLE_RADIUS);
     var neighbors = trunk.LeafLevelNeighbors(ball);
     circle.attr({'fill': branch.color})
     .data({'id':ball.id, 'branch':neighbors})

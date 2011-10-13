@@ -88,26 +88,24 @@ QuadTree.prototype.LeafLevelNeighbors = function(p) {
 }
 QuadTree.prototype.Neighbors = function(p) {
   quadrants = [];
-  if( p.x > (this.mid_x - PARTICLE_RADIUS) && p.y < (this.mid_y + PARTICLE_RADIUS)) { //: # North West
+  if( p.x > (this.mid_x - 2*PARTICLE_RADIUS) && p.y < (this.mid_y + 2*PARTICLE_RADIUS)) { //: # North West
     quadrants.push(this.ne)
   }
-  if( p.x < (this.mid_x + PARTICLE_RADIUS) && p.y < (this.mid_y + PARTICLE_RADIUS)) { //: # North East
+  if( p.x < (this.mid_x + 2*PARTICLE_RADIUS) && p.y < (this.mid_y + 2*PARTICLE_RADIUS)) { //: # North East
     quadrants.push(this.nw)
   }
-  if( p.x > (this.mid_x - PARTICLE_RADIUS) && p.y > (this.mid_y - PARTICLE_RADIUS)) { //: # South West
+  if( p.x > (this.mid_x - 2*PARTICLE_RADIUS) && p.y > (this.mid_y - 2*PARTICLE_RADIUS)) { //: # South West
     quadrants.push(this.se)
   }
-  if( p.x < (this.mid_x + PARTICLE_RADIUS) && p.y > (this.mid_y - PARTICLE_RADIUS)) { //: # South East
+  if( p.x < (this.mid_x + 2*PARTICLE_RADIUS) && p.y > (this.mid_y - 2*PARTICLE_RADIUS)) { //: # South East
     quadrants.push(this.sw)
   }
   return quadrants
 }
-function Particle(x, y, w, offset) {
-  w = w || 400;
-  offset = offset || 0;
-  this.x = x || Math.random()*w+offset;
-  this.y = y || Math.random()*w+offset;
-  this.angle;
+function Particle(x, y) {
+  this.angle = Math.random()*2*Math.PI
+  this.x = x || drop_radius*Math.cos(this.angle)+RADIUS;
+  this.y = y || drop_radius*Math.sin(this.angle)+RADIUS;
   return this;
 }
 Particle.prototype.walk = function(STEP_SIZE, max) {
@@ -148,7 +146,9 @@ Particle.prototype.predictive_walk = function(step, max, trunk) {
     var distances = _.map(near, function(p) {return {'p':p, 'dist':distance_squared({'x':that.x+dx, 'y':that.y+dy}, p)}})
     var filtered = _.select(distances, overlapping);
     if(filtered.length) {
-      var most_overlapping = _.min(filtered, function(p) {return p.dist});  
+     //console.log(filtered)
+    //var most_overlapping = _.min(filtered, function(p) {return p.dist});  
+      var most_overlapping = _.min(filtered, function(p) { return distance_squared(p.p, that)})
       var x1 = most_overlapping.p.x - that.x;
       var y1 = most_overlapping.p.y - that.y;
       var m = dx/dy; 
@@ -158,16 +158,23 @@ Particle.prototype.predictive_walk = function(step, max, trunk) {
         // This would only happen if the particle were actually too far away.
         return {'stat':'destroy', 'p':that};
       } else {
-        var x= ((1)*Math.sqrt(ddmm -muv) +m*y1 +x1)/(m*m+1)
-        var xneg = ((-1)*Math.sqrt(ddmm -muv) +m*y1 +x1)/(m*m+1)
-        if(m < 0) {
-          x = xneg;
-        }         
-        var y = m*x;
-        that.x += x;
-        that.y += y;
+        var P1x= (Math.sqrt(ddmm -muv) +m*y1 +x1)/(m*m+1)
+        var P1y= m*P1x;
+        var P2x= ((-1)*Math.sqrt(ddmm -muv) +m*y1 +x1)/(m*m+1)
+        var P2y= m*P2x;
+        var dist1 = distance({'x':that.x+P1x, 'y':that.y+P1y}, that)
+        var dist2 = distance({'x':that.x+P2x, 'y':that.y+P2y}, that) 
+        if( dist2 < dist1) {
+          that.x += P2x;
+          that.y += P2y;
+        } else {
+          that.x += P1x;
+          that.y += P1y;
+        }
+        //var should_be_2r = distance(that, most_overlapping.p);
+        //console.log(should_be_2r, 'dist1', dist1, 'dist2', dist2)
        
-        return {'stat':'neighbor', 'p':that};
+        return {'stat':'neighbor', 'p':that, 'dist':distance(that, {'x':RADIUS, 'y':RADIUS})};
       }
     } else {
       that.x += dx;
@@ -181,6 +188,9 @@ Particle.prototype.predictive_walk = function(step, max, trunk) {
 }
 Particle.prototype.inside_bounds = function(dx, dy, max) {
   if(this.x+dx < 0 || this.y+dy < 0 || this.x+dx > max || this.y+dy > max) {
+    return false;
+  } else if(distance(this, {'x':RADIUS, 'y':RADIUS}) > drop_radius+8*PARTICLE_RADIUS) {
+    this.destroy();
     return false;
   } else {
     return this;

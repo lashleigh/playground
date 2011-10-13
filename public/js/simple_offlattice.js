@@ -8,7 +8,7 @@ function init(h) {
   this.balls = [];
   this.RADIUS = h['dim'] ? Math.floor(h['dim']) : 300;
   this.PARTICLE_RADIUS = h['radius'] ? parseFloat(h['radius']) : 3;
-  this.drop_radius = 25;
+  this.drop_radius = 50;
   this.idle = true;
   this.FPS = 60;
   this.TIME = Math.floor(Math.random()*1500);
@@ -27,7 +27,7 @@ function init(h) {
   canvas.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   canvasElement.appendTo('body');
 
-  var worker = new Worker('js/balls_worker.js');
+  var worker = new Worker('js/raphael_worker.js');
   worker.postMessage({'cmd': 'init', 'RADIUS':that.RADIUS, 'PARTICLE_RADIUS':that.PARTICLE_RADIUS, 'drop_radius':that.drop_radius})
   
   function request_worker(command) {
@@ -45,9 +45,9 @@ function init(h) {
       that.balls.push(res.ball);
       that.drop_radius = res.drop_radius;
     } else if(res.status ==='init') {
+      console.log(res);  
       draw_ball(res.ball);
       that.balls.push(res.ball);
-      console.log(res);  
     } else if(res.status === 'response') {
       console.log(res); 
       trunk = res.tree;
