@@ -55,7 +55,7 @@ QuadTree.prototype.Insert = function(p) {
   this.DivisionParams();
 }
 QuadTree.prototype.DivisionParams = function() {
-  if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 4*PARTICLE_RADIUS)) {
+  if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 5)) {
     this.Divide();
   }
 }
@@ -88,16 +88,16 @@ QuadTree.prototype.LeafLevelNeighbors = function(p) {
 }
 QuadTree.prototype.Neighbors = function(p) {
   quadrants = [];
-  if( p.x > (this.mid_x - 2*PARTICLE_RADIUS) && p.y < (this.mid_y + 2*PARTICLE_RADIUS)) { //: # North West
+  if( p.x > (this.mid_x - PARTICLE_DIAMETER) && p.y < (this.mid_y + PARTICLE_DIAMETER)) { //: # North West
     quadrants.push(this.ne)
   }
-  if( p.x < (this.mid_x + 2*PARTICLE_RADIUS) && p.y < (this.mid_y + 2*PARTICLE_RADIUS)) { //: # North East
+  if( p.x < (this.mid_x + PARTICLE_DIAMETER) && p.y < (this.mid_y + PARTICLE_DIAMETER)) { //: # North East
     quadrants.push(this.nw)
   }
-  if( p.x > (this.mid_x - 2*PARTICLE_RADIUS) && p.y > (this.mid_y - 2*PARTICLE_RADIUS)) { //: # South West
+  if( p.x > (this.mid_x - PARTICLE_DIAMETER) && p.y > (this.mid_y - PARTICLE_DIAMETER)) { //: # South West
     quadrants.push(this.se)
   }
-  if( p.x < (this.mid_x + 2*PARTICLE_RADIUS) && p.y > (this.mid_y - 2*PARTICLE_RADIUS)) { //: # South East
+  if( p.x < (this.mid_x + PARTICLE_DIAMETER) && p.y > (this.mid_y - PARTICLE_DIAMETER)) { //: # South East
     quadrants.push(this.sw)
   }
   return quadrants
@@ -126,8 +126,8 @@ Particle.prototype.has_neighbors = function(trunk) {
   if(filtered.length) {
     var min_p = _.min(filtered, function(p) {return p.dist});
     min_p.dist = Math.sqrt(min_p.dist);
-    this.x -= (2*PARTICLE_RADIUS-min_p.dist)*Math.cos(this.angle)
-    this.y -= (2*PARTICLE_RADIUS-min_p.dist)*Math.sin(this.angle)
+    this.x -= (PARTICLE_DIAMETER-min_p.dist)*Math.cos(this.angle)
+    this.y -= (PARTICLE_DIAMETER-min_p.dist)*Math.sin(this.angle)
     return true;
   } else {
     return false;
@@ -165,7 +165,7 @@ Particle.prototype.vector_walk = function(step, max, trunk) {
   }
   
   function first_filter(p) {
-    return (Math.abs(p.x-that.x) < 2*PARTICLE_RADIUS+dx) || (Math.abs(p.y-that.y) < 2*PARTICLE_RADIUS+dy);
+    return (Math.abs(p.x-that.x) < PARTICLE_DIAMETER+dx) || (Math.abs(p.y-that.y) < PARTICLE_DIAMETER+dy);
   }
   function dot_prod(p) {
     return (p.x-that.x)*nx + (p.y-that.y)*ny

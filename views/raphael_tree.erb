@@ -10,11 +10,13 @@
 <script type="text/javascript" src="js/raphael-min.js"></script>
 
 <script>
-  var PARTICLE_RADIUS = 5;
-  var DIAMETER_SQUARED = 4*PARTICLE_RADIUS*PARTICLE_RADIUS;
-  var RADIUS = 400;
-  var CANVAS_WIDTH = RADIUS*2;
-  var CANVAS_HEIGHT = RADIUS*2;
+  var ppp = 9;
+  var PARTICLE_RADIUS = 0.5;
+  var PARTICLE_DIAMETER = 1.0;
+  var DIAMETER_SQUARED = 1.0; //4*PARTICLE_RADIUS*PARTICLE_RADIUS;
+  var RADIUS = 75;
+  var CANVAS_WIDTH = RADIUS*2*ppp;
+  var CANVAS_HEIGHT = RADIUS*2*ppp;
   var trunk;
   var particles = {};
   var canvas;
@@ -23,11 +25,11 @@
   var TIME = Math.floor(Math.random()*1530);
   var intervalID;
   var UNIQUE_ID = 0;
-  var drop_radius = 50*PARTICLE_RADIUS;
+  var drop_radius = 25; //*PARTICLE_DIAMETER
   var max_dist = 0;
 
   QuadTree.prototype.DivisionParams = function() {
-    if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 8*PARTICLE_RADIUS)) {
+    if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 5)) {
       this.Divide();
     }
   }
@@ -35,14 +37,14 @@
   $(function() {
     paper = Raphael(0, 50, CANVAS_WIDTH, CANVAS_HEIGHT);
     clear();
-    trunk = new QuadTree(null, 0, CANVAS_WIDTH, 0, CANVAS_HEIGHT);
+    trunk = new QuadTree(null, 0, 2*RADIUS, 0, 2*RADIUS);
   });
 
   function walk_fast() {
     var p = new Particle();
     console.log('new', p);
     while(!p.has_neighbors(trunk)) {
-      p = p.walk(PARTICLE_RADIUS, CANVAS_WIDTH);
+      p = p.walk(RADIUS);
       if(!p) {
         p = new Particle()
         console.log("out of bounds", p);
@@ -68,15 +70,15 @@
   function walk_one() {
     var p = new Particle();
     while(p.has_neighbors(trunk)) { p = new Particle(); console.log("on top");}
-    var c = paper.circle(p.x, p.y, PARTICLE_RADIUS)
+    var c = paper.circle(p.x*ppp, p.y*ppp, PARTICLE_DIAMETER*ppp)
     var stat = 'walk'; 
     while(stat === 'walk' && drop_radius < RADIUS) {
-      var res = p.vector_walk(PARTICLE_RADIUS/2, CANVAS_WIDTH, trunk);
+      var res = p.predictive_walk(PARTICLE_RADIUS, 2*RADIUS, trunk);
       p = res.p;
       stat = res.stat;
      
       switch(stat) {
-        case 'neighbor': if(!!p.x && !!p.y) {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+50*PARTICLE_RADIUS; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
+        case 'neighbor': {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+25; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
         case 'destroy' : p = new Particle(); stat = 'walk'; break;
         default: break;
       }
@@ -85,7 +87,7 @@
   function walk_one_with_interval() {
     var p = new Particle();
     while(p.has_neighbors(trunk)) { p = new Particle(); console.log("on top");}
-    var c = paper.circle(p.x, p.y, PARTICLE_RADIUS)
+    var c = paper.circle(p.x*ppp, p.y*ppp, PARTICLE_RADIUS*ppp)
     var stat = 'walk'; 
     setInterval(function() {
       if(stat === 'walk' && drop_radius < RADIUS) {
@@ -108,10 +110,10 @@
     paper.clear()
     background = paper.rect(0,0,CANVAS_WIDTH, CANVAS_HEIGHT)
     background.attr({'fill':'#fff'}).mouseup(function(e) {
-      addParticle(e.offsetX, e.offsetY)
+      addParticle(e.offsetX/ppp, e.offsetY/ppp)
     });
-    paper.circle(400, 400, drop_radius)
-    paper.circle(400, 400, drop_radius+100*PARTICLE_RADIUS)
+    paper.circle(CANVAS_WIDTH/2, CANVAS_WIDTH/2, drop_radius*ppp)
+    paper.circle(CANVAS_WIDTH/2, CANVAS_WIDTH/2, drop_radius*ppp+100*ppp)
   }
   function addParticle(x, y) {
     var p = new Particle(x, y)
@@ -127,7 +129,7 @@
     }
   }
   function draw_ball(ball, branch) {
-    var circle = paper.circle(ball.x, ball.y, PARTICLE_RADIUS);
+    var circle = paper.circle(ball.x*ppp, ball.y*ppp, PARTICLE_RADIUS*ppp);
     var neighbors = trunk.LeafLevelNeighbors(ball);
     circle.attr({'fill': branch.color})
     .data({'id':ball.id, 'branch':neighbors})
@@ -163,7 +165,7 @@
     if(!b.color) {
       b.color = makeColor();
     }
-    b.rect = paper.rect(b.x_min, b.y_min, (b.x_max-b.x_min), (b.y_max-b.y_min)); 
+    b.rect = paper.rect(ppp*b.x_min, ppp*b.y_min, ppp*(b.x_max-b.x_min), ppp*(b.y_max-b.y_min)); 
   }
 
 </script>

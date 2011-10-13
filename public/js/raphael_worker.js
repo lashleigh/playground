@@ -1,10 +1,11 @@
 importScripts('underscore-min.js');
 importScripts('tree.js');
 var RADIUS;
-var CANVAS_WIDTH;
-var PARTICLE_RADIUS;
-var STEP_SIZE;
-var DIAMETER_SQUARED;
+var DIMENSION;
+var PARTICLE_RADIUS = 0.5;
+var PARTICLE_DIAMETER = 2*PARTICLE_RADIUS;
+var DIAMETER_SQUARED = PARTICLE_DIAMETER*PARTICLE_DIAMETER;
+var STEP_SIZE = PARTICLE_RADIUS/4;
 var UNIQUE_ID = 0;
 
 var max_dist = 0;
@@ -15,12 +16,9 @@ var trunk;
 
 function init(data) {
   RADIUS = data.RADIUS;
-  PARTICLE_RADIUS = data.PARTICLE_RADIUS;
   drop_radius = data.drop_radius;
-  STEP_SIZE = PARTICLE_RADIUS/4;
-  DIAMETER_SQUARED = 4*PARTICLE_RADIUS*PARTICLE_RADIUS;
-  CANVAS_WIDTH = 2*RADIUS;
-  trunk = new QuadTree(null, 0, 2*RADIUS, 0, 2*RADIUS);
+  DIMENSION = 2*RADIUS;
+  trunk = new QuadTree(null, 0, DIMENSION, 0, DIMENSION);
 
   var p = new Particle(RADIUS, RADIUS);
   particles.push(p);
@@ -47,7 +45,7 @@ function execute() {
   var stat = 'walk';
   var res;
   while(stat !== 'neighbor') {
-    res = p.predictive_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
+    res = p.predictive_walk(PARTICLE_RADIUS, DIMENSION, trunk);
     p = res.p;
     stat = res.stat;
     if(stat==='destroy') {
@@ -59,7 +57,7 @@ function execute() {
   particles.push(p);
   if(res.dist > max_dist) {
     max_dist=res.dist; 
-    drop_radius = max_dist+8*PARTICLE_RADIUS;
+    drop_radius = max_dist+25*PARTICLE_RADIUS;
   }
   self.postMessage({'status':'complete', 'ball':p, 'drop_radius':drop_radius});
 }

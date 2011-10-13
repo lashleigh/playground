@@ -7,7 +7,9 @@ function init(h) {
 
   this.balls = [];
   this.RADIUS = h['dim'] ? Math.floor(h['dim']) : 300;
-  this.PARTICLE_RADIUS = h['radius'] ? parseFloat(h['radius']) : 3;
+  this.ppp = h['ppp'] ? parseFloat(h['ppp']) : 3;
+  this.PARTICLE_RADIUS = 0.5;
+  this.PARTICLE_DIAMETER = 1.0;
   this.drop_radius = 50;
   this.idle = true;
   this.FPS = 60;
@@ -17,8 +19,8 @@ function init(h) {
   this.intervalID;
 
   var canvas;
-  var CANVAS_WIDTH = 2*that.RADIUS;
-  var CANVAS_HEIGHT = 2*that.RADIUS;
+  var CANVAS_WIDTH = 2*that.RADIUS*that.ppp;
+  var CANVAS_HEIGHT = 2*that.RADIUS*that.ppp;
 
   var canvasElement = $("<canvas width='" + CANVAS_WIDTH + 
                         "' height='" + CANVAS_HEIGHT + "'></canvas>");
@@ -28,7 +30,7 @@ function init(h) {
   canvasElement.appendTo('body');
 
   var worker = new Worker('js/raphael_worker.js');
-  worker.postMessage({'cmd': 'init', 'RADIUS':that.RADIUS, 'PARTICLE_RADIUS':that.PARTICLE_RADIUS, 'drop_radius':that.drop_radius})
+  worker.postMessage({'cmd': 'init', 'RADIUS':that.RADIUS, 'drop_radius':that.drop_radius})
   
   function request_worker(command) {
     command = command || 'execute';
@@ -63,7 +65,7 @@ function init(h) {
     canvas.fillStyle = makeColor(that.TIME); 
     if(color) {canvas.fillStyle = color;}
     canvas.beginPath();
-    canvas.arc(ball.x, ball.y, that.PARTICLE_RADIUS, 0, Math.PI*2, true);
+    canvas.arc(ball.x*that.ppp, ball.y*that.ppp, that.PARTICLE_RADIUS*that.ppp, 0, Math.PI*2, true);
     canvas.closePath();
     canvas.fill();
   }
@@ -94,7 +96,7 @@ function get_options_from_form() {
   var res = {};
   if(document.getElementById("radius").checkValidity()) {res['dim'] = document.getElementById("radius").value;}
   //if(document.getElementById("stick").checkValidity())  {res['stick'] = document.getElementById("stick").value;}
-  if(document.getElementById("ppp").checkValidity())    {res['radius'] =   document.getElementById("ppp").value;}
+  if(document.getElementById("ppp").checkValidity())    {res['ppp'] =   document.getElementById("ppp").value;}
   console.log(res);
   newSim(res)
 }
