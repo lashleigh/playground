@@ -71,7 +71,7 @@
     var c = paper.circle(p.x, p.y, PARTICLE_RADIUS)
     var stat = 'walk'; 
     while(stat === 'walk' && drop_radius < RADIUS) {
-      var res = p.predictive_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
+      var res = p.vector_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
       p = res.p;
       stat = res.stat;
      

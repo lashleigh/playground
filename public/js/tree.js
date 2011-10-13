@@ -133,6 +133,44 @@ Particle.prototype.has_neighbors = function(trunk) {
     return false;
   }
 }
+Particle.prototype.vector_walk = function(step, max, trunk) {
+  var that = this;
+  that.angle = Math.random()*2*Math.PI;
+  var nx = Math.cos(that.angle);
+  var ny = Math.sin(that.angle);
+  var dx = step*nx;
+  var dy = step*ny;
+  if(that.inside_bounds(dx, dy, max)) {
+    var close_enough = _.select(trunk.Search({'x':that.x+dx, 'y':that.y+dy}), function(p) { return first_filter(p)}); 
+    var with_dots = _.map(close_enough, function(p) {return {'p':p, 'dot':dot_prod(p), 'dist':distance_squared(that, p)}});
+    var correct_direction = _.select(with_dots, function(p) {return p.dot > 0 && (p.dist - p.dot*p.dot < DIAMETER_SQUARED)});
+    if(correct_direction.length > 0) {
+      //console.log(close_enough, with_dots, correct_direction);
+      var first_hit = _.min(correct_direction, function(p) {return p.dot }); 
+      var D = first_hit.dot;
+      var h2 = distance_squared(first_hit.p, that) - D*D;
+      var d = Math.sqrt(DIAMETER_SQUARED - h2);
+      var adjusted_step = D-d;
+      //console.log(first_hit, D, h2, d, adjusted_step);
+      that.x += adjusted_step*nx;
+      that.y += adjusted_step*ny;
+      return {'stat':'neighbor', 'p':that, 'dist': distance(that, {'x':RADIUS, 'y':RADIUS})};
+    } else {
+      that.x += dx;
+      that.y += dy;
+      return {'stat':'walk', 'p':that};
+    }
+  } else {
+    return {'stat':'destroy', 'p':that};
+  }
+  
+  function first_filter(p) {
+    return (Math.abs(p.x-that.x) < 2*PARTICLE_RADIUS+dx) || (Math.abs(p.y-that.y) < 2*PARTICLE_RADIUS+dy);
+  }
+  function dot_prod(p) {
+    return (p.x-that.x)*nx + (p.y-that.y)*ny
+  }
+}
 Particle.prototype.predictive_walk = function(step, max, trunk) {
   var that = this;
   that.angle = Math.random()*2*Math.PI;
@@ -201,7 +239,7 @@ Particle.prototype.destroy = function() {
 }
 
 function overlapping(element, index, array) {
-  return element.dist < DIAMETER_SQUARED-0.001; 
+  return element.dist < DIAMETER_SQUARED; 
 }
 function distance_squared(a, b) {
   return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)
