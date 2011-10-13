@@ -40,7 +40,7 @@ function init(h) {
     var res = e.data;
     //console.log(res.ball);
     if(res.status === 'complete') {
-      that.TIME += 2;
+      that.TIME += 1;
       draw_ball(res.ball);
       that.balls.push(res.ball);
       that.drop_radius = res.drop_radius;
