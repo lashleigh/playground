@@ -55,7 +55,7 @@ QuadTree.prototype.Insert = function(p) {
   this.DivisionParams();
 }
 QuadTree.prototype.DivisionParams = function() {
-  if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 5)) {
+  if(this.items && this.items.length > 1 && (this.x_max-this.x_min > 3)) {
     this.Divide();
   }
 }
@@ -106,6 +106,7 @@ function Particle(x, y) {
   this.angle = Math.random()*2*Math.PI
   this.x = x || drop_radius*Math.cos(this.angle)+RADIUS;
   this.y = y || drop_radius*Math.sin(this.angle)+RADIUS;
+  this.created_at = (new Date()).valueOf();
   return this;
 }
 Particle.prototype.walk = function(STEP_SIZE, max) {
@@ -141,20 +142,23 @@ Particle.prototype.vector_walk = function(step, max, trunk) {
   var dx = step*nx;
   var dy = step*ny;
   if(that.inside_bounds(dx, dy, max)) {
-    var close_enough = _.select(trunk.Search({'x':that.x+dx, 'y':that.y+dy}), function(p) { return first_filter(p)}); 
-    var with_dots = _.map(close_enough, function(p) {return {'p':p, 'dot':dot_prod(p), 'dist':distance_squared(that, p)}});
-    var correct_direction = _.select(with_dots, function(p) {return p.dot > 0 && (p.dist - p.dot*p.dot < DIAMETER_SQUARED)});
-    if(correct_direction.length > 0) {
-      //console.log(close_enough, with_dots, correct_direction);
-      var first_hit = _.min(correct_direction, function(p) {return p.dot }); 
-      var D = first_hit.dot;
-      var h2 = distance_squared(first_hit.p, that) - D*D;
-      var d = Math.sqrt(DIAMETER_SQUARED - h2);
-      var adjusted_step = D-d;
-      //console.log(first_hit, D, h2, d, adjusted_step);
-      that.x += adjusted_step*nx;
-      that.y += adjusted_step*ny;
-      return {'stat':'neighbor', 'p':that, 'dist': distance(that, {'x':RADIUS, 'y':RADIUS})};
+    var within_box = _.select(trunk.Search({'x':that.x, 'y':that.y}), function(p) {return (Math.abs(p.x-that.x) < step+PARTICLE_DIAMETER && Math.abs(p.y-that.y) < step+PARTICLE_DIAMETER)});
+    var with_dots = _.map(within_box, function(p) { return dot_and_dist(p)}); 
+    var collides_with = _.select(with_dots, function(res) {return !!res.step_size}); // && (res.dist_squared >= DIAMETER_SQUARED-0.01 && res.distance_squared <= DIAMETER_SQUARED + 0.01) })
+    if(collides_with.length > 0) {
+      var first = _.min(collides_with, function(res) {return res.step_size})
+      var x = that.x+first.step_size*nx
+      var y = that.y+first.step_size*ny
+      var dist_squared = distance_squared(first.p, {'x':x, 'y':y})
+      if(dist_squared > DIAMETER_SQUARED - 0.01 && dist_squared < DIAMETER_SQUARED + 0.01) {
+        that.x = x; 
+        that.y = y; 
+        return {'stat':'neighbor', 'p':that, 'dist': distance(that, {'x':RADIUS, 'y':RADIUS})};
+      } else {
+        that.x += dx;
+        that.y += dy;
+        return {'stat':'walk', 'p':that};
+      }
     } else {
       that.x += dx;
       that.y += dy;
@@ -163,12 +167,20 @@ Particle.prototype.vector_walk = function(step, max, trunk) {
   } else {
     return {'stat':'destroy', 'p':that};
   }
-  
-  function first_filter(p) {
-    return (Math.abs(p.x-that.x) < PARTICLE_DIAMETER+dx) || (Math.abs(p.y-that.y) < PARTICLE_DIAMETER+dy);
-  }
-  function dot_prod(p) {
-    return (p.x-that.x)*nx + (p.y-that.y)*ny
+
+  function dot_and_dist(p) {
+    var res = {};
+    var cx = (p.x-that.x);
+    var cy = (p.y-that.y);
+    res['p'] = p;
+    res['dot'] = cx*nx+cy*ny;
+    if(res['dot'] > 0) {
+      res['perpendicular_dist_squared'] = (cx*cx+cy*cy)-res['dot']*res['dot'];
+      if(res['perpendicular_dist_squared'] > 0 && res['perpendicular_dist_squared'] < DIAMETER_SQUARED) {
+        res['step_size'] = res['dot'] - Math.sqrt(DIAMETER_SQUARED - res['perpendicular_dist_squared']) 
+      }
+    }
+    return res;
   }
 }
 Particle.prototype.predictive_walk = function(step, max, trunk) {
@@ -227,7 +239,7 @@ Particle.prototype.predictive_walk = function(step, max, trunk) {
 Particle.prototype.inside_bounds = function(dx, dy, max) {
   if(this.x+dx < 0 || this.y+dy < 0 || this.x+dx > max || this.y+dy > max) {
     return false;
-  } else if(distance(this, {'x':RADIUS, 'y':RADIUS}) > drop_radius+100*PARTICLE_RADIUS) {
+  } else if(distance(this, {'x':RADIUS, 'y':RADIUS}) > drop_radius+20*PARTICLE_RADIUS) {
     this.destroy();
     return false;
   } else {

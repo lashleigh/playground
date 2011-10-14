@@ -1,6 +1,7 @@
 var balls = [];
 var sim;
 var trunk;
+var canvas;
 
 function init(h) {
   var that = this;
@@ -18,7 +19,6 @@ function init(h) {
   this.start_time = new Date();
   this.intervalID;
 
-  var canvas;
   var CANVAS_WIDTH = 2*that.RADIUS*that.ppp;
   var CANVAS_HEIGHT = 2*that.RADIUS*that.ppp;
 
@@ -34,7 +34,7 @@ function init(h) {
   
   function request_worker(command) {
     command = command || 'execute';
-    if(command==='execute') {that.idle = false;}
+    //if(command==='execute') {that.idle = false;}
     worker.postMessage({'cmd': command})
   }
   worker.addEventListener('message', function(e) {
@@ -42,9 +42,10 @@ function init(h) {
     var res = e.data;
     //console.log(res.ball);
     if(res.status === 'complete') {
-      that.TIME += 1;
-      draw_ball(res.ball);
-      that.balls.push(res.ball);
+      that.TIME += 15;
+      res.balls.forEach(function(p) {draw_ball(p); that.balls.push(p)})
+      //draw_ball(res.ball);
+      //that.balls.push(res.ball);
       that.drop_radius = res.drop_radius;
     } else if(res.status ==='init') {
       console.log(res);  
@@ -55,6 +56,7 @@ function init(h) {
       trunk = res.tree;
     }
     if(res.drop_radius > that.RADIUS) {
+      worker.terminate()
       that.idle=false;
       console.log("Finished in: ", ((new Date())-that.start_time)/1000, 'sec');
       clearInterval(that.intervalID);
@@ -90,7 +92,8 @@ function newSim(h) {
   } else {
     get_options_from_form();
   }
-  sim.play();
+  //sim.play();
+  sim.execute();
 }
 function get_options_from_form() {
   var res = {};
@@ -100,3 +103,31 @@ function get_options_from_form() {
   console.log(res);
   newSim(res)
 }
+function draw_quad_tree(trunk) {
+  find_branches(trunk);
+}
+function find_branches(b) {
+  if(b.nw) {
+  console.log(b);
+    find_branches(b.nw);
+    find_branches(b.sw);
+    find_branches(b.ne);
+    find_branches(b.se);
+  } else {
+    draw_branch(b);
+  } 
+}
+function draw_branch(b) {
+  //b.rect = paper.rect(ppp*b.x_min, ppp*b.y_min, ppp*(b.x_max-b.x_min), ppp*(b.y_max-b.y_min)); 
+  canvas.strokeRect(sim.ppp*b.x_min, sim.ppp*b.y_min, sim.ppp*(b.x_max-b.x_min), sim.ppp*(b.y_max-b.y_min)); 
+  
+  //canvas.moveTo(ppp*b.x_min, ppp*b.y_min); // give the (x,y) coordinates
+  //canvas.lineTo(ppp*b.x_max, ppp*b.y_min);  
+  //canvas.lineTo(ppp*b.x_max, ppp*b.y_max); // give the (x,y) coordinates
+  //canvas.lineTo(ppp*b.x_min, ppp*b.y_max);  
+  //canvas.lineTo(ppp*b.x_min, ppp*b.y_max);  
+
+  canvas.fill();
+}
+
+

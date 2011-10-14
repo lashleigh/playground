@@ -14,7 +14,7 @@
   var PARTICLE_RADIUS = 0.5;
   var PARTICLE_DIAMETER = 1.0;
   var DIAMETER_SQUARED = 1.0; //4*PARTICLE_RADIUS*PARTICLE_RADIUS;
-  var RADIUS = 75;
+  var RADIUS = 55;
   var CANVAS_WIDTH = RADIUS*2*ppp;
   var CANVAS_HEIGHT = RADIUS*2*ppp;
   var trunk;
@@ -25,14 +25,8 @@
   var TIME = Math.floor(Math.random()*1530);
   var intervalID;
   var UNIQUE_ID = 0;
-  var drop_radius = 25; //*PARTICLE_DIAMETER
+  var drop_radius = 10; //*PARTICLE_DIAMETER
   var max_dist = 0;
-
-  QuadTree.prototype.DivisionParams = function() {
-    if(this.items && this.items.length > 4 && (this.x_max-this.x_min > 5)) {
-      this.Divide();
-    }
-  }
 
   $(function() {
     paper = Raphael(0, 50, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -70,15 +64,15 @@
   function walk_one() {
     var p = new Particle();
     while(p.has_neighbors(trunk)) { p = new Particle(); console.log("on top");}
-    var c = paper.circle(p.x*ppp, p.y*ppp, PARTICLE_DIAMETER*ppp)
+    var c = paper.circle(p.x*ppp, p.y*ppp, PARTICLE_RADIUS*ppp)
     var stat = 'walk'; 
     while(stat === 'walk' && drop_radius < RADIUS) {
-      var res = p.predictive_walk(PARTICLE_RADIUS, 2*RADIUS, trunk);
+      var res = p.vector_walk(PARTICLE_DIAMETER, 2*RADIUS, trunk);
       p = res.p;
       stat = res.stat;
      
       switch(stat) {
-        case 'neighbor': {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+25; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
+        case 'neighbor': {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+20; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
         case 'destroy' : p = new Particle(); stat = 'walk'; break;
         default: break;
       }
@@ -91,20 +85,20 @@
     var stat = 'walk'; 
     setInterval(function() {
       if(stat === 'walk' && drop_radius < RADIUS) {
-        var res = p.predictive_walk(PARTICLE_RADIUS, CANVAS_WIDTH, trunk);
+        var res = p.vector_walk(4*PARTICLE_DIAMETER, CANVAS_WIDTH, trunk);
         p = res.p;
         stat = res.stat;
         //var anim = Raphael.animation({cx: p.x, cy: p.y}, 2e3);
         //c.animate(anim); //
-        c.attr({'cx':p.x, 'cy':p.y});
+        c.attr({'cx':p.x*ppp, 'cy':p.y*ppp});
        
         switch(stat) {
-          case 'neighbor': if(!!p.x && !!p.y) {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+6*PARTICLE_RADIUS; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
+          case 'neighbor': if(!!p.x && !!p.y) {if(res.dist > max_dist) {max_dist=res.dist; drop_radius = max_dist+10*PARTICLE_RADIUS; console.log(drop_radius);}; addParticle(p.x, p.y);}; break;
           case 'destroy' : p = new Particle(); stat = 'walk'; break;
           default: break;
         }
       }
-    }, 1000/1500);
+    }, 1000/15);
   }
   function clear() {
     paper.clear()
@@ -113,7 +107,7 @@
       addParticle(e.offsetX/ppp, e.offsetY/ppp)
     });
     paper.circle(CANVAS_WIDTH/2, CANVAS_WIDTH/2, drop_radius*ppp)
-    paper.circle(CANVAS_WIDTH/2, CANVAS_WIDTH/2, drop_radius*ppp+100*ppp)
+    paper.circle(CANVAS_WIDTH/2, CANVAS_WIDTH/2, drop_radius*ppp+20*ppp)
   }
   function addParticle(x, y) {
     var p = new Particle(x, y)

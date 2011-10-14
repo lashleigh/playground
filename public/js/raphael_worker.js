@@ -5,7 +5,7 @@ var DIMENSION;
 var PARTICLE_RADIUS = 0.5;
 var PARTICLE_DIAMETER = 2*PARTICLE_RADIUS;
 var DIAMETER_SQUARED = PARTICLE_DIAMETER*PARTICLE_DIAMETER;
-var STEP_SIZE = PARTICLE_RADIUS/4;
+var STEP_SIZE = PARTICLE_RADIUS;
 var UNIQUE_ID = 0;
 
 var max_dist = 0;
@@ -21,6 +21,7 @@ function init(data) {
   trunk = new QuadTree(null, 0, DIMENSION, 0, DIMENSION);
 
   var p = new Particle(RADIUS, RADIUS);
+  p.assimilated_at = (new Date()).valueOf();
   particles.push(p);
   trunk.Insert(p);
   self.postMessage({'status':'init', 'ball':p, 'trunk':trunk, 'message':'Initialize', 'RADIUS':RADIUS});
@@ -41,23 +42,35 @@ self.addEventListener('message', function(e) {
 }, false);
 
 function execute() {
-  var p = new Particle();
-  var stat = 'walk';
-  var res;
-  while(stat !== 'neighbor') {
-    res = p.predictive_walk(PARTICLE_RADIUS, DIMENSION, trunk);
-    p = res.p;
-    stat = res.stat;
-    if(stat==='destroy') {
-      p = new Particle();
-      stat = 'walk';
+  var balls=[];
+  var count = 0;
+  while(drop_radius < RADIUS) {
+    var p = new Particle();
+    var stat = 'walk';
+    var res;
+    while(stat !== 'neighbor') {
+      res = p.vector_walk(STEP_SIZE, DIMENSION, trunk);
+      p = res.p;
+      stat = res.stat;
+      if(stat==='destroy') {
+        p = new Particle();
+        stat = 'walk';
+      }
+    }
+    p.assimilated_at = (new Date()).valueOf();
+    trunk.Insert(p);
+    particles.push(p);
+    balls.push(p);
+    if(res.dist > max_dist) {
+      max_dist=res.dist; 
+      drop_radius = max_dist+25*PARTICLE_RADIUS;
+    }
+    count++;
+    if(count % 20 === 0) {
+      self.postMessage({'status':'complete', 'balls':balls, 'drop_radius':drop_radius});
+      balls = [];
     }
   }
-  trunk.Insert(p);
-  particles.push(p);
-  if(res.dist > max_dist) {
-    max_dist=res.dist; 
-    drop_radius = max_dist+25*PARTICLE_RADIUS;
-  }
-  self.postMessage({'status':'complete', 'ball':p, 'drop_radius':drop_radius});
+  self.postMessage({'status':'response', 'tree':trunk, 'balls':particles});
+  self.postMessage({'status':'complete', 'balls':balls, 'drop_radius':drop_radius});
 }
